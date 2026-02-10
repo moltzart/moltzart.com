@@ -15,6 +15,7 @@ export default function Research() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   const fetchDocs = useCallback(async (pw: string) => {
     setLoading(true);
@@ -45,6 +46,7 @@ export default function Research() {
       setError("Connection error");
     }
     setLoading(false);
+    setChecking(false);
   }, []);
 
   useEffect(() => {
@@ -52,6 +54,8 @@ export default function Research() {
     if (saved) {
       setPassword(saved);
       fetchDocs(saved);
+    } else {
+      setChecking(false);
     }
   }, [fetchDocs]);
 
@@ -59,6 +63,10 @@ export default function Research() {
     e.preventDefault();
     if (password.trim()) fetchDocs(password.trim());
   };
+
+  if (checking) {
+    return <div className="min-h-screen bg-zinc-950" />;
+  }
 
   if (!authed) {
     return (

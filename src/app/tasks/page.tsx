@@ -196,6 +196,7 @@ export default function Tasks() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchTasks = useCallback(async (pw: string) => {
@@ -228,6 +229,7 @@ export default function Tasks() {
       setError("Connection error");
     }
     setLoading(false);
+    setChecking(false);
   }, []);
 
   useEffect(() => {
@@ -235,6 +237,8 @@ export default function Tasks() {
     if (saved) {
       setPassword(saved);
       fetchTasks(saved);
+    } else {
+      setChecking(false);
     }
   }, [fetchTasks]);
 
@@ -242,6 +246,10 @@ export default function Tasks() {
     e.preventDefault();
     if (password.trim()) fetchTasks(password.trim());
   };
+
+  if (checking) {
+    return <div className="min-h-screen bg-zinc-950" />;
+  }
 
   if (!authed) {
     return (

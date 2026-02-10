@@ -16,6 +16,7 @@ export default function ResearchDoc() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   const fetchDoc = useCallback(
     async (pw: string) => {
@@ -53,6 +54,7 @@ export default function ResearchDoc() {
         setError("Connection error");
       }
       setLoading(false);
+      setChecking(false);
     },
     [slug]
   );
@@ -62,6 +64,8 @@ export default function ResearchDoc() {
     if (saved) {
       setPassword(saved);
       fetchDoc(saved);
+    } else {
+      setChecking(false);
     }
   }, [fetchDoc]);
 
@@ -69,6 +73,10 @@ export default function ResearchDoc() {
     e.preventDefault();
     if (password.trim()) fetchDoc(password.trim());
   };
+
+  if (checking) {
+    return <div className="min-h-screen bg-zinc-950" />;
+  }
 
   if (!authed) {
     return (
