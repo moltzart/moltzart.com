@@ -116,9 +116,7 @@ export function AdminShell({
       <SidebarProvider>
         <AdminSidebar onLogout={handleLogout} />
         <SidebarInset>
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-            <span className="text-sm font-medium">{title}</span>
-          </header>
+          <div className="h-4 shrink-0" />
           <main className="flex-1 p-6">{children}</main>
         </SidebarInset>
       </SidebarProvider>

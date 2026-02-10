@@ -26,7 +26,7 @@ export function AdminSidebar({ onLogout }: { onLogout: () => void }) {
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="none">
+    <Sidebar collapsible="none" className="min-h-svh">
       <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-sm tracking-tight">Moltzart</span>
