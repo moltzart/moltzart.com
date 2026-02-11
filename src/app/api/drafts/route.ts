@@ -2,10 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { fetchDraftsRaw, updateDraftsFile } from "@/lib/github";
 
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "8573948386";
+
 async function checkAuth() {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;
   return token && token === process.env.TASKS_PASSWORD;
+}
+
+async function notifyTelegram(message: string) {
+  if (!TELEGRAM_BOT_TOKEN) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: "Markdown",
+      }),
+    });
+  } catch {
+    // Best effort — don't block the response
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -19,24 +39,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  // Fetch current file
   const raw = await fetchDraftsRaw();
   if (!raw) {
     return NextResponse.json({ error: "Could not fetch drafts file" }, { status: 500 });
   }
 
-  // Parse the draftId to find the draft: format is "DATE-TYPE-TARGET-INDEX"
-  const parts = draftId.split("-");
-  const date = parts.slice(0, 3).join("-"); // "2026-02-11"
-  const type = parts[3]; // "original" or "reply"
-  const target = parts.slice(4, -1).join("-"); // reply target or "original"
-
-  // Find the draft in the content by looking for the blockquote
-  // We'll mark it by moving it between sections
   let { content, sha } = raw;
   const lines = content.split("\n");
   let found = false;
   let inPendingSection = false;
+  let draftContent = "";
 
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].match(/^## Pending Approval/i)) {
@@ -47,25 +59,45 @@ export async function POST(request: NextRequest) {
       inPendingSection = false;
     }
 
-    // Look for entries in Pending section that match our date and aren't already rejected
-    if (inPendingSection && lines[i].startsWith("**") && lines[i].includes(date)) {
-      // Check if this is already rejected (has ❌)
-      if (lines[i].includes("❌ REJECTED")) continue;
+    if (inPendingSection && lines[i].startsWith("**") && !lines[i].includes("❌ REJECTED")) {
+      // Extract date and type info from the header line
+      const headerLine = lines[i];
+      const dateMatch = headerLine.match(/(\d{4}-\d{2}-\d{2})/);
+      const headerDate = dateMatch ? dateMatch[1] : "";
 
-      // Check type match
-      const isReply = lines[i].toLowerCase().includes("reply");
-      const isOriginal = lines[i].toLowerCase().includes("original");
+      // Parse draftId: "DATE-TYPE-TARGET-INDEX"
+      const parts = draftId.split("-");
+      const idDate = parts.slice(0, 3).join("-");
+      const idType = parts[3];
 
-      if ((type === "reply" && isReply && (target === "original" || lines[i].toLowerCase().includes(target))) ||
-          (type === "original" && isOriginal)) {
+      if (headerDate !== idDate) continue;
+
+      const isReply = headerLine.toLowerCase().includes("reply");
+      const isOriginal = headerLine.toLowerCase().includes("original");
+
+      if ((idType === "reply" && isReply) || (idType === "original" && isOriginal)) {
+        // If reply, also match the target handle
+        if (idType === "reply") {
+          const idTarget = parts.slice(4, -1).join("-");
+          if (idTarget !== "original" && !headerLine.toLowerCase().includes(idTarget.toLowerCase())) {
+            continue;
+          }
+        }
+
+        // Capture the draft content (blockquote lines following the header)
+        for (let j = i + 1; j < lines.length; j++) {
+          if (lines[j].startsWith("> ")) {
+            draftContent += (draftContent ? " " : "") + lines[j].slice(2).trim();
+          } else {
+            break;
+          }
+        }
 
         if (action === "approve") {
-          // Add ✅ marker
-          lines[i] = lines[i].replace(/\*\*\s*$/, " ✅**");
+          lines[i] = headerLine.replace(/\*\*\s*$/, " ✅**");
           if (!lines[i].endsWith("**")) lines[i] += " ✅";
         } else {
-          // Add ❌ REJECTED marker
-          lines[i] = lines[i].replace(/\*\*\s*$/, " ❌ REJECTED**");
+          lines[i] = headerLine.replace(/\*\*\s*$/, " ❌ REJECTED**");
           if (!lines[i].endsWith("**")) lines[i] += " ❌ REJECTED";
         }
         found = true;
@@ -86,5 +118,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to update file" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  // Notify Moltzart via Telegram
+  const emoji = action === "approve" ? "✅" : "❌";
+  const preview = draftContent.length > 100 ? draftContent.slice(0, 100) + "..." : draftContent;
+  const msg = `${emoji} Draft ${action}d by Matt:\n\n_${preview}_`;
+  await notifyTelegram(msg);
+
+  return NextResponse.json({ ok: true, action });
 }
