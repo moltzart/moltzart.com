@@ -2,103 +2,44 @@
 
 import { useState } from "react";
 import type { Draft, DraftDay, DraftStatus } from "@/lib/github";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
-function DraftCard({
-  draft,
-  onAction,
-  acting,
-}: {
-  draft: Draft;
-  onAction: (id: string, action: "approve" | "reject") => void;
-  acting: string | null;
-}) {
-  return (
-    <div className="border border-zinc-800 rounded-lg bg-zinc-900/50 p-5">
-      <div className="flex items-start gap-4">
-        <div className="flex-1 min-w-0">
-          {draft.type === "reply" && draft.replyTo && (
-            <p className="text-xs text-zinc-500 mb-2">
-              Reply to{" "}
-              <a
-                href={`https://x.com/${draft.replyTo}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-zinc-400 hover:underline"
-              >
-                @{draft.replyTo}
-              </a>
-              {draft.replyContext && (
-                <span className="text-zinc-600"> &mdash; {draft.replyContext}</span>
-              )}
-            </p>
-          )}
-          <p className="text-[15px] text-zinc-100 leading-relaxed whitespace-pre-wrap">
-            {draft.content}
-          </p>
-          <p className="text-xs text-zinc-600 mt-2">{draft.content.length} chars</p>
-        </div>
-        <div className="flex flex-col gap-2 shrink-0">
-          <button
-            onClick={() => onAction(draft.id, "approve")}
-            disabled={acting === draft.id}
-            className="px-4 py-2 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-500 transition-colors disabled:opacity-50"
-          >
-            Approve
-          </button>
-          <button
-            onClick={() => onAction(draft.id, "reject")}
-            disabled={acting === draft.id}
-            className="px-4 py-2 rounded-md text-sm font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300 transition-colors disabled:opacity-50"
-          >
-            Reject
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PastDraft({ draft }: { draft: Draft }) {
-  const statusColor = {
-    posted: "text-blue-400",
-    approved: "text-green-400",
-    rejected: "text-zinc-600",
-    pending: "text-amber-400",
-  }[draft.status];
-
-  const statusLabel = {
-    posted: "Posted",
-    approved: "Approved",
-    rejected: "Rejected",
-    pending: "Pending",
-  }[draft.status];
-
-  return (
-    <div className="flex items-start gap-3 py-3 border-b border-zinc-800/50 last:border-0">
-      <span className={`text-xs font-medium shrink-0 w-16 ${statusColor}`}>
-        {statusLabel}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-zinc-400 line-clamp-2">{draft.content}</p>
-        <div className="flex items-center gap-2 mt-1 text-xs text-zinc-600">
-          <span>{draft.date}</span>
-          {draft.type === "reply" && draft.replyTo && (
-            <span>Reply to @{draft.replyTo}</span>
-          )}
-          {draft.tweetId && (
-            <a
-              href={`https://x.com/moltzart/status/${draft.tweetId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-zinc-400 underline"
-            >
-              View
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+function statusBadge(status: DraftStatus) {
+  switch (status) {
+    case "pending":
+      return (
+        <Badge variant="outline" className="border-amber-500/30 text-amber-400 bg-amber-500/10">
+          Pending
+        </Badge>
+      );
+    case "approved":
+      return (
+        <Badge variant="outline" className="border-green-500/30 text-green-400 bg-green-500/10">
+          Approved
+        </Badge>
+      );
+    case "posted":
+      return (
+        <Badge variant="outline" className="border-blue-500/30 text-blue-400 bg-blue-500/10">
+          Posted
+        </Badge>
+      );
+    case "rejected":
+      return (
+        <Badge variant="outline" className="border-zinc-600/30 text-zinc-500 bg-zinc-800/30">
+          Rejected
+        </Badge>
+      );
+  }
 }
 
 export function DraftsView({
@@ -110,11 +51,8 @@ export function DraftsView({
 }) {
   const [days, setDays] = useState(initialDays);
   const [acting, setActing] = useState<string | null>(null);
-  const [showPast, setShowPast] = useState(false);
 
   const allDrafts = days.flatMap((d) => d.drafts);
-  const pending = allDrafts.filter((d) => d.status === "pending");
-  const past = allDrafts.filter((d) => d.status !== "pending");
 
   const handleAction = async (draftId: string, action: "approve" | "reject") => {
     setActing(draftId);
@@ -144,41 +82,79 @@ export function DraftsView({
   };
 
   return (
-    <div className="space-y-8">
-      {pending.length === 0 ? (
-        <p className="text-sm text-zinc-500 py-8 text-center">
-          No drafts awaiting review.
-        </p>
-      ) : (
-        <div className="space-y-4">
-          {pending.map((draft) => (
-            <DraftCard
-              key={draft.id}
-              draft={draft}
-              onAction={handleAction}
-              acting={acting}
-            />
-          ))}
-        </div>
-      )}
-
-      {past.length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowPast(!showPast)}
-            className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
-          >
-            {showPast ? "Hide" : "Show"} past drafts ({past.length})
-          </button>
-          {showPast && (
-            <div className="mt-3">
-              {past.map((draft) => (
-                <PastDraft key={draft.id} draft={draft} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-20">Status</TableHead>
+          <TableHead className="w-20">Type</TableHead>
+          <TableHead>Draft</TableHead>
+          <TableHead className="w-36 text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {allDrafts.map((draft) => (
+          <TableRow key={draft.id}>
+            <TableCell>{statusBadge(draft.status)}</TableCell>
+            <TableCell className="text-xs text-zinc-400">
+              {draft.type === "reply" && draft.replyTo ? (
+                <a
+                  href={`https://x.com/${draft.replyTo}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-zinc-200 hover:underline"
+                >
+                  @{draft.replyTo}
+                </a>
+              ) : (
+                "Original"
+              )}
+            </TableCell>
+            <TableCell>
+              <p className="text-sm text-zinc-200 leading-relaxed">
+                {draft.content}
+              </p>
+              <span className="text-xs text-zinc-600">{draft.content.length} chars</span>
+              {draft.tweetId && (
+                <a
+                  href={`https://x.com/moltzart/status/${draft.tweetId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-zinc-600 hover:text-zinc-400 underline ml-2"
+                >
+                  View
+                </a>
+              )}
+              {draft.feedback && (
+                <p className="text-xs text-zinc-600 italic mt-1">{draft.feedback}</p>
+              )}
+            </TableCell>
+            <TableCell className="text-right">
+              {draft.status === "pending" && (
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-green-600/30 text-green-400 hover:bg-green-600/20 hover:text-green-300"
+                    onClick={() => handleAction(draft.id, "approve")}
+                    disabled={acting === draft.id}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-zinc-700 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-400"
+                    onClick={() => handleAction(draft.id, "reject")}
+                    disabled={acting === draft.id}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              )}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
