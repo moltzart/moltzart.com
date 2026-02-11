@@ -172,7 +172,7 @@ function RecurringStrip({ tasks }: { tasks: RecurringTask[] }) {
               {tasks.map((t, i) => (
                 <tr key={i} className="text-xs">
                   <td className="text-left text-zinc-300 py-2 pr-4">{t.task}</td>
-                  <td className="text-left text-zinc-500 font-mono py-2 pr-4 whitespace-nowrap">{t.schedule}</td>
+                  <td className="text-left text-zinc-500 py-2 pr-4 whitespace-nowrap">{t.schedule}</td>
                   <td className="text-left text-zinc-600 py-2">{t.method}</td>
                 </tr>
               ))}

@@ -34,10 +34,12 @@ export function AdminSidebar() {
 
   return (
     <Sidebar collapsible="none" className="min-h-svh">
-      <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm tracking-tight">Moltzart</span>
-        </div>
+      <SidebarHeader className="border-b border-sidebar-border px-4 py-4 flex items-center justify-center">
+        <img
+          src="/avatar.jpg"
+          alt="Moltzart"
+          className="w-10 h-10 rounded-full"
+        />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
