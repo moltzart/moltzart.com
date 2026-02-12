@@ -125,51 +125,36 @@ export async function deleteResearchDoc(slug: string): Promise<boolean> {
 // --- Newsletter Digests ---
 
 export interface NewsletterArticle {
+  title: string;
+  description: string;
   source: string;
   link: string;
-  topic: string;
-  summary: string;
-  relevance: string;
 }
 
 export interface NewsletterDigest {
   date: string;
   label: string;
-  sections: { source: string; articles: NewsletterArticle[] }[];
+  articles: NewsletterArticle[];
 }
 
-function parseDigestMd(md: string): { source: string; articles: NewsletterArticle[] }[] {
-  const sections: { source: string; articles: NewsletterArticle[] }[] = [];
+function parseDigestMd(md: string): NewsletterArticle[] {
+  const articles: NewsletterArticle[] = [];
   const lines = md.split("\n");
-  let currentSource = "";
 
   for (const line of lines) {
-    const headerMatch = line.match(/^## (.+)/);
-    if (headerMatch) {
-      currentSource = headerMatch[1].replace(/\s*—\s*.+$/, "").trim();
-      continue;
-    }
-
-    if (line.startsWith("|") && !line.includes("---") && !line.includes("Source") && !line.includes("DN Relevance")) {
-      const cols = line.split("|").map((c) => c.trim()).filter(Boolean);
-      if (cols.length >= 5) {
-        const linkMatch = cols[1].match(/\[([^\]]*)\]\(([^)]*)\)/);
-        const article: NewsletterArticle = {
-          source: cols[0] || currentSource,
-          link: linkMatch ? linkMatch[2] : cols[1],
-          topic: cols[2],
-          summary: cols[3],
-          relevance: cols[4],
-        };
-        if (!sections.find((s) => s.source === currentSource)) {
-          sections.push({ source: currentSource, articles: [] });
-        }
-        sections.find((s) => s.source === currentSource)!.articles.push(article);
-      }
+    // Match: - **"Title"** — Description [Source: Name](url)
+    const match = line.match(/^-\s+\*\*(.+?)\*\*\s*—\s*(.+?)\s*\[Source:\s*(.+?)\]\((.+?)\)\s*$/);
+    if (match) {
+      articles.push({
+        title: match[1].replace(/^"|"$/g, ""),
+        description: match[2].trim().replace(/\.$/, ""),
+        source: match[3].trim(),
+        link: match[4].trim(),
+      });
     }
   }
 
-  return sections;
+  return articles;
 }
 
 export async function fetchNewsletterDigests(): Promise<NewsletterDigest[]> {
@@ -208,9 +193,9 @@ export async function fetchNewsletterDigests(): Promise<NewsletterDigest[]> {
     else if (diffDays === 1) label = "Yesterday";
     else label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
-    const sections = parseDigestMd(content);
-    if (sections.length > 0) {
-      digests.push({ date, label, sections });
+    const articles = parseDigestMd(content);
+    if (articles.length > 0) {
+      digests.push({ date, label, articles });
     }
   }
 
