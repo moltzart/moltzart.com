@@ -541,6 +541,7 @@ When building a new page or component, verify:
 6. **Missing transitions** — Add `transition-colors` to elements with hover states.
 7. **Wrong container width** — Admin pages use `max-w-2xl` or `max-w-3xl`, not `max-w-xl`.
 8. **Uppercase without tracking** — Small uppercase text needs `tracking-wider`.
+9. **Badges/status next to page title** — Admin page titles are `<h1>` only. No badges, counters, or status indicators inline with the title. Status belongs in the page content (per-row badges on list items).
 
 ---
 
