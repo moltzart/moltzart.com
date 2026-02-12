@@ -122,6 +122,101 @@ export async function deleteResearchDoc(slug: string): Promise<boolean> {
   return deleteRes.ok;
 }
 
+// --- Newsletter Digests ---
+
+export interface NewsletterArticle {
+  source: string;
+  link: string;
+  topic: string;
+  summary: string;
+  relevance: string;
+}
+
+export interface NewsletterDigest {
+  date: string;
+  label: string;
+  sections: { source: string; articles: NewsletterArticle[] }[];
+}
+
+function parseDigestMd(md: string): { source: string; articles: NewsletterArticle[] }[] {
+  const sections: { source: string; articles: NewsletterArticle[] }[] = [];
+  const lines = md.split("\n");
+  let currentSource = "";
+
+  for (const line of lines) {
+    const headerMatch = line.match(/^## (.+)/);
+    if (headerMatch) {
+      currentSource = headerMatch[1].replace(/\s*—\s*.+$/, "").trim();
+      continue;
+    }
+
+    if (line.startsWith("|") && !line.includes("---") && !line.includes("Source") && !line.includes("DN Relevance")) {
+      const cols = line.split("|").map((c) => c.trim()).filter(Boolean);
+      if (cols.length >= 5) {
+        const linkMatch = cols[1].match(/\[([^\]]*)\]\(([^)]*)\)/);
+        const article: NewsletterArticle = {
+          source: cols[0] || currentSource,
+          link: linkMatch ? linkMatch[2] : cols[1],
+          topic: cols[2],
+          summary: cols[3],
+          relevance: cols[4],
+        };
+        if (!sections.find((s) => s.source === currentSource)) {
+          sections.push({ source: currentSource, articles: [] });
+        }
+        sections.find((s) => s.source === currentSource)!.articles.push(article);
+      }
+    }
+  }
+
+  return sections;
+}
+
+export async function fetchNewsletterDigests(): Promise<NewsletterDigest[]> {
+  const res = await ghFetch(`/repos/${REPO}/contents/memory`);
+  if (!res.ok) return [];
+
+  const files = await res.json();
+  const digestFiles = files
+    .filter((f: { name: string }) => f.name.match(/^newsletter-digest-\d{4}-\d{2}-\d{2}\.md$/))
+    .sort((a: { name: string }, b: { name: string }) => b.name.localeCompare(a.name));
+
+  const digests: NewsletterDigest[] = [];
+
+  for (const file of digestFiles) {
+    const contentRes = await ghFetch(
+      `/repos/${REPO}/contents/memory/${encodeURIComponent(file.name)}`
+    );
+    if (!contentRes.ok) continue;
+
+    const fileData = await contentRes.json();
+    const content = Buffer.from(fileData.content, "base64").toString("utf-8");
+    const dateMatch = file.name.match(/(\d{4}-\d{2}-\d{2})/);
+    if (!dateMatch) continue;
+
+    const date = dateMatch[1];
+    const d = new Date(date + "T12:00:00");
+    const now = new Date();
+    const today = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const docDate = new Date(d.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    today.setHours(0, 0, 0, 0);
+    docDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((today.getTime() - docDate.getTime()) / 86400000);
+
+    let label: string;
+    if (diffDays === 0) label = "Today";
+    else if (diffDays === 1) label = "Yesterday";
+    else label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+
+    const sections = parseDigestMd(content);
+    if (sections.length > 0) {
+      digests.push({ date, label, sections });
+    }
+  }
+
+  return digests;
+}
+
 // --- Tasks ---
 
 interface Task {
