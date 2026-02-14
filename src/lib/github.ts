@@ -606,6 +606,236 @@ export async function fetchDraftsRaw(): Promise<{ content: string; sha: string }
   return { content, sha: fileData.sha };
 }
 
+// --- Content Radar ---
+
+export interface RadarItem {
+  title: string;
+  source: string;
+  link: string;
+  lane: string;
+  note: string;
+  angle?: string;
+}
+
+export interface RadarDay {
+  date: string;
+  label: string;
+  sections: { heading: string; items: RadarItem[] }[];
+  clusters?: string[];
+  rawMarkdown: string;
+}
+
+function parseRadarSection(heading: string, lines: string[]): RadarItem[] {
+  const items: RadarItem[] = [];
+  const defaultLaneMap: Record<string, string> = {
+    "hacker news": "HN",
+    "the verge": "AI/Tech",
+    "anthropic": "AI",
+    "openai": "AI",
+    "techcrunch": "Tech",
+    "a16z": "Strategy",
+    "simon willison": "AI",
+    "platformer": "Tech",
+    "every.to": "AI/Biz",
+    "indie hackers": "Indie",
+    "lenny": "Product",
+    "stratechery": "Strategy",
+    "reddit": "Reddit",
+    "x timeline": "X",
+    "x scan": "X",
+    "blogs": "Blog",
+  };
+
+  const defaultLane = Object.entries(defaultLaneMap).find(([k]) =>
+    heading.toLowerCase().includes(k)
+  )?.[1] || heading.replace(/^#+\s*/, "");
+
+  let currentTitle = "";
+  let currentLink = "";
+  let currentLane = defaultLane;
+  let currentWhyBullets: string[] = [];
+  let inWhy = false;
+
+  function pushCurrent() {
+    if (currentTitle) {
+      const note = currentWhyBullets.join("\n");
+      items.push({ title: currentTitle, source: heading, link: currentLink, lane: currentLane, note: note.trim(), angle: undefined });
+    }
+    currentTitle = "";
+    currentLink = "";
+    currentLane = defaultLane;
+    currentWhyBullets = [];
+    inWhy = false;
+  }
+
+  for (const line of lines) {
+    // v3 format: ### Short descriptive title
+    const h3Match = line.match(/^### (.+)$/);
+    if (h3Match) {
+      pushCurrent();
+      currentTitle = h3Match[1].trim();
+      continue;
+    }
+
+    // v3 format: - Source: X — https://...
+    const sourceMatch = line.match(/^- Source:\s*(.+?)\s*[—–-]\s*(\S+)\s*$/);
+    if (sourceMatch && currentTitle) {
+      currentLink = sourceMatch[2];
+      continue;
+    }
+
+    // v3 format: - Lane: agentic-coding
+    const laneMatch = line.match(/^- Lane:\s*(.+)$/);
+    if (laneMatch && currentTitle) {
+      currentLane = laneMatch[1].trim();
+      continue;
+    }
+
+    // v3 format: - Why:
+    if (line.match(/^- Why:\s*$/) && currentTitle) {
+      inWhy = true;
+      continue;
+    }
+
+    // v3 format: Why bullets (indented with - )
+    if (inWhy && currentTitle) {
+      const bulletMatch = line.match(/^\s+-\s+(.+)$/);
+      if (bulletMatch) {
+        currentWhyBullets.push(bulletMatch[1].trim());
+        continue;
+      }
+      if (line.trim() === "") continue;
+      // Non-bullet line ends the Why section
+      inWhy = false;
+    }
+
+    // v2 format: **[Title](url)** — Source Name
+    const v2Match = line.match(/^\*\*\[(.+?)\]\(([^)]+)\)\*\*\s*[—–-]\s*(.+)$/);
+    if (v2Match) {
+      pushCurrent();
+      currentTitle = v2Match[1].replace(/\s*\(\d+\s*pts?\)/, "");
+      currentLink = v2Match[2];
+      currentWhyBullets.push(v2Match[3].trim());
+      continue;
+    }
+
+    // v1 format: **Title** — Note [Source](url)
+    const v1Match = line.match(/^\*\*(.+?)\*\*\s*[—–-]\s*(.+)$/);
+    if (v1Match) {
+      pushCurrent();
+      currentTitle = v1Match[1].replace(/\s*\(\d+\s*pts?\)/, "");
+      let noteText = v1Match[2].trim();
+      const linkMatch = noteText.match(/\[([^\]]*)\]\(([^)]+)\)/);
+      currentLink = linkMatch ? linkMatch[2] : "";
+      noteText = noteText.replace(/\s*\[[^\]]*\]\([^)]+\)\s*$/, "").trim();
+      currentWhyBullets.push(noteText);
+      continue;
+    }
+
+    // Blockquote lines (v2 "Why Matt cares")
+    if (line.startsWith("> ") && currentTitle) {
+      const text = line.slice(2).trim().replace(/^Why Matt cares:\s*/i, "");
+      currentWhyBullets.push(text);
+      continue;
+    }
+
+    // Italic lines
+    if (line.startsWith("*") && line.endsWith("*") && currentTitle) {
+      currentWhyBullets.push(line.replace(/^\*+|\*+$/g, "").trim());
+    }
+  }
+  pushCurrent();
+
+  return items;
+}
+
+function parseRadarMd(md: string): { sections: { heading: string; items: RadarItem[] }[]; clusters: string[] } {
+  const sections: { heading: string; items: RadarItem[] }[] = [];
+  const clusters: string[] = [];
+  const lines = md.split("\n");
+  let currentHeading = "";
+  let currentLines: string[] = [];
+  let inClusters = false;
+
+  for (const line of lines) {
+    if (line.match(/^## Topic Clusters/i)) {
+      if (currentHeading && currentLines.length > 0) {
+        const items = parseRadarSection(currentHeading, currentLines);
+        if (items.length > 0) sections.push({ heading: currentHeading, items });
+      }
+      inClusters = true;
+      currentHeading = "";
+      currentLines = [];
+      continue;
+    }
+
+    if (line.match(/^## Scan Quality/i) || line.match(/^---$/)) {
+      if (inClusters) continue;
+      if (currentHeading && currentLines.length > 0) {
+        const items = parseRadarSection(currentHeading, currentLines);
+        if (items.length > 0) sections.push({ heading: currentHeading, items });
+      }
+      currentHeading = "";
+      currentLines = [];
+      continue;
+    }
+
+    if (line.match(/^## /)) {
+      if (currentHeading && currentLines.length > 0 && !inClusters) {
+        const items = parseRadarSection(currentHeading, currentLines);
+        if (items.length > 0) sections.push({ heading: currentHeading, items });
+      }
+      currentHeading = line.replace(/^## /, "").trim();
+      currentLines = [];
+      inClusters = false;
+      continue;
+    }
+
+    if (inClusters && line.startsWith("**")) {
+      clusters.push(line.replace(/\*\*/g, "").replace(/\s*[—–-].*$/, "").trim());
+    } else {
+      currentLines.push(line);
+    }
+  }
+
+  if (currentHeading && currentLines.length > 0 && !inClusters) {
+    const items = parseRadarSection(currentHeading, currentLines);
+    if (items.length > 0) sections.push({ heading: currentHeading, items });
+  }
+
+  return { sections, clusters };
+}
+
+export async function fetchRadarDates(): Promise<string[]> {
+  const res = await ghFetch(`/repos/${REPO}/contents/memory`);
+  if (!res.ok) return [];
+  const files = await res.json();
+  return files
+    .filter((f: { name: string }) => f.name.match(/^content-radar-\d{4}-\d{2}-\d{2}\.md$/))
+    .map((f: { name: string }) => f.name.match(/(\d{4}-\d{2}-\d{2})/)![1])
+    .sort((a: string, b: string) => b.localeCompare(a));
+}
+
+export async function fetchRadarDay(date: string): Promise<RadarDay | null> {
+  const filename = `content-radar-${date}.md`;
+  const res = await ghFetch(`/repos/${REPO}/contents/memory/${encodeURIComponent(filename)}`);
+  if (!res.ok) return null;
+  const fileData = await res.json();
+  const content = Buffer.from(fileData.content, "base64").toString("utf-8");
+  const { sections, clusters } = parseRadarMd(content);
+
+  const d = new Date(date + "T12:00:00");
+  const now = new Date();
+  const today = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  const docDate = new Date(d.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  today.setHours(0, 0, 0, 0);
+  docDate.setHours(0, 0, 0, 0);
+  const diffDays = Math.floor((today.getTime() - docDate.getTime()) / 86400000);
+  const label = diffDays === 0 ? "Today" : diffDays === 1 ? "Yesterday" : d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+
+  return { date, label, sections, clusters, rawMarkdown: content };
+}
+
 export async function updateDraftsFile(content: string, sha: string, message: string): Promise<boolean> {
   const res = await fetch(
     `https://api.github.com/repos/${REPO}/contents/memory/x-drafts.md`,

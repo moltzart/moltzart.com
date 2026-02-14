@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Brain, CheckSquare, FileText, LayoutDashboard, LogOut, Newspaper, PenLine } from "lucide-react";
+import { Brain, CheckSquare, FileText, LayoutDashboard, LogOut, Newspaper, PenLine, Radar } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -22,6 +22,7 @@ const navItems = [
   { title: "Tasks", href: "/admin/tasks", icon: CheckSquare },
   { title: "Drafts", href: "/admin/drafts", icon: PenLine },
   { title: "Newsletter", href: "/admin/newsletter", icon: Newspaper },
+  { title: "Radar", href: "/admin/radar", icon: Radar },
   { title: "Research", href: "/admin/research", icon: FileText },
 ];
 
