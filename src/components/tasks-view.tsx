@@ -74,18 +74,18 @@ const sectionConfig: Record<
 function StatusIcon({ status }: { status: Task["status"] }) {
   switch (status) {
     case "done":
-      return <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />;
+      return <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />;
     case "partial":
-      return <CircleDot size={14} className="text-amber-400 shrink-0 mt-0.5" />;
+      return <CircleDot size={14} className="text-amber-400 shrink-0" />;
     case "open":
-      return <Circle size={14} className="text-zinc-500 shrink-0 mt-0.5" />;
+      return <Circle size={14} className="text-zinc-500 shrink-0" />;
   }
 }
 
 function TaskItem({ task }: { task: Task }) {
   return (
-    <div className="flex items-start gap-2.5 py-1.5">
-      <StatusIcon status={task.status} />
+    <div className="flex gap-2.5 py-1.5">
+      <div className="flex items-center h-5 shrink-0"><StatusIcon status={task.status} /></div>
       <div className="min-w-0">
         <span
           className={`text-sm ${
