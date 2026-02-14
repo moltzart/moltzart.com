@@ -11,10 +11,15 @@ import {
   ListTodo,
   Sparkles,
   ChevronRight,
+  ChevronDown,
   X,
   Folder,
+  Loader2,
 } from "lucide-react";
 import type { BrainFile } from "@/lib/github";
+import { MarkdownRenderer } from "@/components/admin/markdown-renderer";
+import { EmptyState } from "@/components/admin/empty-state";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const CATEGORIES = [
   { id: "all", label: "All", icon: Brain },
@@ -27,6 +32,11 @@ const CATEGORIES = [
   { id: "config", label: "Config", icon: Settings },
 ] as const;
 
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  return `${(bytes / 1024).toFixed(1)}KB`;
+}
+
 function highlightMatches(text: string, query: string): string {
   if (!query) return text;
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -36,17 +46,33 @@ function highlightMatches(text: string, query: string): string {
   );
 }
 
-function getSearchSnippet(content: string, query: string): string | null {
-  if (!query || !content) return null;
-  const lower = content.toLowerCase();
-  const idx = lower.indexOf(query.toLowerCase());
-  if (idx === -1) return null;
-  const start = Math.max(0, idx - 80);
-  const end = Math.min(content.length, idx + query.length + 80);
-  let snippet = content.slice(start, end).replace(/\n/g, " ");
-  if (start > 0) snippet = "…" + snippet;
-  if (end < content.length) snippet = snippet + "…";
-  return snippet;
+// Group files by category for tree view
+function groupByCategory(files: BrainFile[]): { category: string; label: string; files: BrainFile[] }[] {
+  const map = new Map<string, BrainFile[]>();
+  for (const f of files) {
+    if (!map.has(f.category)) map.set(f.category, []);
+    map.get(f.category)!.push(f);
+  }
+  const catOrder = ["identity", "memory", "daily-logs", "tasks", "research", "content", "config"];
+  const catLabels: Record<string, string> = {
+    identity: "Identity",
+    memory: "Memory",
+    "daily-logs": "Daily Logs",
+    tasks: "Tasks",
+    research: "Research",
+    content: "Content",
+    config: "Config",
+  };
+  return catOrder
+    .filter((cat) => map.has(cat))
+    .map((cat) => ({ category: cat, label: catLabels[cat] || cat, files: map.get(cat)! }));
+}
+
+interface SearchResult {
+  path: string;
+  name: string;
+  snippet: string;
+  matchCount: number;
 }
 
 export function BrainView() {
@@ -57,9 +83,11 @@ export function BrainView() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
-  const [loadedContents, setLoadedContents] = useState<Record<string, string>>({});
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
 
-  // Load file list
+  // Load file list only (no content preloading)
   useEffect(() => {
     (async () => {
       const res = await fetch("/api/brain", {
@@ -70,72 +98,59 @@ export function BrainView() {
       if (res.ok) {
         const data = await res.json();
         setFiles(data.files);
-
-        // Load all file contents for search
-        const contents: Record<string, string> = {};
-        await Promise.all(
-          data.files.map(async (f: BrainFile) => {
-            const contentRes = await fetch("/api/brain", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "content", path: f.path }),
-            });
-            if (contentRes.ok) {
-              const d = await contentRes.json();
-              contents[f.path] = d.content;
-            }
-          })
-        );
-        setLoadedContents(contents);
       }
       setLoading(false);
     })();
   }, []);
 
-  // Load selected file content
-  const loadContent = useCallback(
-    async (path: string) => {
-      if (loadedContents[path]) {
-        setFileContent(loadedContents[path]);
-        setSelectedFile(path);
-        return;
-      }
-      setSelectedFile(path);
-      setLoadingContent(true);
-      const res = await fetch("/api/brain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "content", path }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setFileContent(data.content);
-        setLoadedContents((prev) => ({ ...prev, [path]: data.content }));
-      }
-      setLoadingContent(false);
-    },
-    [loadedContents]
-  );
+  // Server-side search with debounce
+  useEffect(() => {
+    const query = search.trim();
+    if (!query) return;
 
-  // Filter + search
+    const timeout = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch("/api/brain/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.results);
+        }
+      } catch {}
+      setSearching(false);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  // Derive: clear search results when search is empty
+  const effectiveSearchResults = search.trim() ? searchResults : null;
+
+  // Load selected file content on-demand
+  const loadContent = useCallback(async (path: string) => {
+    setSelectedFile(path);
+    setLoadingContent(true);
+    const res = await fetch("/api/brain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "content", path }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setFileContent(data.content);
+    }
+    setLoadingContent(false);
+  }, []);
+
+  // Filter files by category
   const filtered = useMemo(() => {
-    let result = files;
-    if (activeCategory !== "all") {
-      result = result.filter((f) => f.category === activeCategory);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter((f) => {
-        const nameMatch = f.name.toLowerCase().includes(q);
-        const pathMatch = f.path.toLowerCase().includes(q);
-        const contentMatch = loadedContents[f.path]
-          ?.toLowerCase()
-          .includes(q);
-        return nameMatch || pathMatch || contentMatch;
-      });
-    }
-    return result;
-  }, [files, activeCategory, search, loadedContents]);
+    if (activeCategory === "all") return files;
+    return files.filter((f) => f.category === activeCategory);
+  }, [files, activeCategory]);
 
   // Stats
   const stats = useMemo(() => {
@@ -146,30 +161,153 @@ export function BrainView() {
     return cats;
   }, [files]);
 
+  const toggleGroup = (cat: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
+
+  const groups = useMemo(() => groupByCategory(filtered), [filtered]);
+
   if (loading) {
     return (
       <div className="max-w-4xl space-y-6">
         <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
           <Brain size={20} /> Brain
         </h1>
-        <div className="text-sm text-zinc-500">Loading your second brain…</div>
+        <div className="text-sm text-zinc-500">Loading your second brain...</div>
       </div>
     );
   }
 
+  // File list panel content
+  const fileListContent = search.trim() && effectiveSearchResults ? (
+    // Search results mode
+    <div className="space-y-1">
+      {searching && (
+        <div className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-500">
+          <Loader2 size={12} className="animate-spin" /> Searching...
+        </div>
+      )}
+      {!searching && effectiveSearchResults.length === 0 && (
+        <p className="text-sm text-zinc-500 py-6 text-center">No results for &ldquo;{search}&rdquo;</p>
+      )}
+      {effectiveSearchResults.map((result) => (
+        <button
+          key={result.path}
+          onClick={() => loadContent(result.path)}
+          className={`w-full text-left px-3 py-2.5 rounded-md transition-colors ${
+            selectedFile === result.path
+              ? "bg-zinc-800 text-zinc-100"
+              : "hover:bg-zinc-800/40 text-zinc-300"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <FileText size={12} className="text-zinc-500 shrink-0" />
+            <span className="text-sm truncate">{result.name}</span>
+            <span className="text-[10px] font-mono text-zinc-600 ml-auto shrink-0">
+              {result.matchCount} match{result.matchCount !== 1 ? "es" : ""}
+            </span>
+          </div>
+          {result.snippet && (
+            <p
+              className="text-xs text-zinc-500 mt-1 line-clamp-2 pl-5"
+              dangerouslySetInnerHTML={{
+                __html: highlightMatches(
+                  result.snippet.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                  search
+                ),
+              }}
+            />
+          )}
+        </button>
+      ))}
+    </div>
+  ) : (
+    // Tree view mode (grouped by category)
+    <div className="space-y-1">
+      {groups.map((group) => (
+        <div key={group.category}>
+          <button
+            onClick={() => toggleGroup(group.category)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors rounded-md hover:bg-zinc-800/20"
+          >
+            {collapsedGroups.has(group.category) ? (
+              <ChevronRight size={12} />
+            ) : (
+              <ChevronDown size={12} />
+            )}
+            <span className="uppercase tracking-wider">{group.label}</span>
+            <span className="text-zinc-600 ml-auto font-mono">{group.files.length}</span>
+          </button>
+          {!collapsedGroups.has(group.category) && (
+            <div className="ml-2">
+              {group.files.map((file) => (
+                <button
+                  key={file.path}
+                  onClick={() => loadContent(file.path)}
+                  className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                    selectedFile === file.path
+                      ? "bg-zinc-800 text-zinc-100"
+                      : "hover:bg-zinc-800/40 text-zinc-300"
+                  }`}
+                >
+                  <FileText size={12} className="text-zinc-500 shrink-0" />
+                  <span className="text-sm truncate flex-1">{file.name}</span>
+                  <span className="text-[10px] font-mono text-zinc-600 shrink-0">
+                    {formatSize(file.size)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  // Content panel
+  const contentPanel = selectedFile ? (
+    <div className="flex flex-col h-full">
+      {/* Sticky breadcrumb */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-zinc-800/50 bg-zinc-950/80 shrink-0">
+        <Folder size={12} className="text-zinc-600" />
+        <span className="text-xs text-zinc-500 font-mono truncate">{selectedFile}</span>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-4">
+          {loadingContent ? (
+            <div className="flex items-center gap-2 text-sm text-zinc-500 py-8">
+              <Loader2 size={14} className="animate-spin" /> Loading...
+            </div>
+          ) : fileContent ? (
+            <MarkdownRenderer content={fileContent} />
+          ) : (
+            <p className="text-sm text-zinc-500">Failed to load content.</p>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  ) : (
+    <div className="flex items-center justify-center h-full">
+      <p className="text-sm text-zinc-600">Select a file to view its content</p>
+    </div>
+  );
+
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-4xl space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
           <Brain size={20} /> Brain
         </h1>
-        <span className="text-xs text-zinc-500">
-          {files.length} files · {Object.keys(loadedContents).length} indexed
-        </span>
+        <span className="text-xs text-zinc-500">{files.length} files</span>
       </div>
 
-      {/* Global search */}
+      {/* Search */}
       <div className="relative">
         <Search
           size={14}
@@ -177,7 +315,7 @@ export function BrainView() {
         />
         <input
           type="text"
-          placeholder="Search everything… (⌘K)"
+          placeholder="Search everything..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full rounded-lg border border-zinc-800/50 bg-zinc-900/30 pl-9 pr-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-colors"
@@ -195,8 +333,7 @@ export function BrainView() {
       {/* Category filters */}
       <div className="flex gap-2 flex-wrap">
         {CATEGORIES.map((cat) => {
-          const count =
-            cat.id === "all" ? files.length : stats[cat.id] || 0;
+          const count = cat.id === "all" ? files.length : stats[cat.id] || 0;
           if (count === 0 && cat.id !== "all") return null;
           const active = activeCategory === cat.id;
           return (
@@ -211,9 +348,7 @@ export function BrainView() {
             >
               <cat.icon size={12} />
               {cat.label}
-              <span
-                className={`ml-1 ${active ? "text-zinc-400" : "text-zinc-600"}`}
-              >
+              <span className={`ml-1 ${active ? "text-zinc-400" : "text-zinc-600"}`}>
                 {count}
               </span>
             </button>
@@ -221,107 +356,27 @@ export function BrainView() {
         })}
       </div>
 
-      {/* File list / detail split */}
-      {selectedFile && fileContent !== null ? (
-        <div className="space-y-4">
-          {/* Back button + file path */}
-          <button
-            onClick={() => {
-              setSelectedFile(null);
-              setFileContent(null);
-            }}
-            className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            ← Back to files
-          </button>
-          <div className="flex items-center gap-2">
-            <Folder size={14} className="text-zinc-600" />
-            <span className="text-xs text-zinc-500 font-mono">{selectedFile}</span>
-          </div>
-          <h2 className="text-lg font-semibold text-zinc-200">
-            {files.find((f) => f.path === selectedFile)?.name || selectedFile}
-          </h2>
-
-          {/* Rendered markdown content */}
-          <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-6 overflow-auto max-h-[70vh]">
-            {loadingContent ? (
-              <div className="text-sm text-zinc-500">Loading…</div>
-            ) : (
-              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed">
-                {search
-                  ? fileContent.split("\n").map((line, i) => (
-                      <span
-                        key={i}
-                        dangerouslySetInnerHTML={{
-                          __html: highlightMatches(
-                            line.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-                            search
-                          ) + "\n",
-                        }}
-                      />
-                    ))
-                  : fileContent}
-              </pre>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* File list */
-        <div className="space-y-1">
-          {filtered.length === 0 ? (
-            <div className="text-sm text-zinc-500 py-8 text-center">
-              {search
-                ? `No results for "${search}"`
-                : "No files in this category"}
+      {/* Split panel: file list + content */}
+      {/* Desktop: side by side. Mobile: stacked */}
+      <div className="flex flex-col md:flex-row gap-4 min-h-[60vh]">
+        {/* File list (40%) */}
+        <div className="w-full md:w-2/5 rounded-lg border border-zinc-800/50 bg-zinc-900/30 overflow-hidden">
+          <ScrollArea className="h-[60vh]">
+            <div className="p-2">
+              {filtered.length === 0 ? (
+                <EmptyState icon={FileText} message="No files in this category" />
+              ) : (
+                fileListContent
+              )}
             </div>
-          ) : (
-            filtered.map((file) => {
-              const snippet = search
-                ? getSearchSnippet(loadedContents[file.path] || "", search)
-                : null;
-              return (
-                <button
-                  key={file.path}
-                  onClick={() => loadContent(file.path)}
-                  className="w-full text-left flex items-start gap-3 rounded-lg border border-zinc-800/50 bg-zinc-900/30 px-4 py-3 hover:bg-zinc-900/60 transition-colors group"
-                >
-                  <FileText
-                    size={14}
-                    className="text-zinc-600 shrink-0 mt-0.5"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-zinc-300 group-hover:text-zinc-100 transition-colors">
-                        {file.name}
-                      </span>
-                      <span className="text-[10px] text-zinc-600 font-mono">
-                        {file.path}
-                      </span>
-                    </div>
-                    {snippet && (
-                      <p
-                        className="text-xs text-zinc-500 mt-1 line-clamp-2"
-                        dangerouslySetInnerHTML={{
-                          __html: highlightMatches(
-                            snippet
-                              .replace(/</g, "&lt;")
-                              .replace(/>/g, "&gt;"),
-                            search
-                          ),
-                        }}
-                      />
-                    )}
-                  </div>
-                  <ChevronRight
-                    size={14}
-                    className="text-zinc-700 shrink-0 mt-0.5 group-hover:text-zinc-500 transition-colors"
-                  />
-                </button>
-              );
-            })
-          )}
+          </ScrollArea>
         </div>
-      )}
+
+        {/* Content preview (60%) */}
+        <div className="w-full md:w-3/5 rounded-lg border border-zinc-800/50 bg-zinc-900/30 overflow-hidden h-[60vh]">
+          {contentPanel}
+        </div>
+      </div>
     </div>
   );
 }

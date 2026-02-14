@@ -1,24 +1,28 @@
 import Link from "next/link";
 import {
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
-  PenLine,
-  FileText,
   ArrowUpRight,
-  Circle,
-  Repeat,
+  CircleCheck,
 } from "lucide-react";
-import { fetchTasks, fetchDrafts, fetchResearchList } from "@/lib/github";
-import { Badge } from "@/components/ui/badge";
+import { fetchTasks, fetchDrafts } from "@/lib/github";
+import { PageHeader } from "@/components/admin/page-header";
+import { StatusDot } from "@/components/admin/status-dot";
+import { EmptyState } from "@/components/admin/empty-state";
 
 export const dynamic = "force-dynamic";
 
+type ActionItem = {
+  type: "urgent" | "pending-draft" | "approved-draft";
+  label: string;
+  source: string;
+  sourceHref: string;
+  dotVariant: "urgent" | "active" | "complete";
+  draftId?: string;
+};
+
 export default async function AdminDashboard() {
-  const [tasksData, draftsData, researchDocs] = await Promise.all([
+  const [tasksData, draftsData] = await Promise.all([
     fetchTasks(),
     fetchDrafts(),
-    fetchResearchList(),
   ]);
 
   // Task stats
@@ -42,229 +46,157 @@ export default async function AdminDashboard() {
     rejected: allDrafts.filter((d) => d.status === "rejected").length,
   };
 
-  // Urgent tasks list
+  // Build unified action queue
+  const actions: ActionItem[] = [];
+
+  // Urgent tasks
   const urgentTasks = tasksData.sections
     .find((s) => s.id === "urgent")
     ?.tasks.filter((t) => t.status !== "done") || [];
+  for (const task of urgentTasks) {
+    actions.push({
+      type: "urgent",
+      label: task.text,
+      source: "Tasks",
+      sourceHref: "/admin/tasks",
+      dotVariant: "urgent",
+    });
+  }
 
   // Pending drafts
   const pendingDrafts = allDrafts.filter((d) => d.status === "pending");
+  for (const draft of pendingDrafts) {
+    actions.push({
+      type: "pending-draft",
+      label: draft.content.slice(0, 120) + (draft.content.length > 120 ? "..." : ""),
+      source: "Drafts",
+      sourceHref: "/admin/drafts",
+      dotVariant: "active",
+      draftId: draft.id,
+    });
+  }
 
-  // Approved but not yet posted
+  // Approved drafts ready to post
   const approvedDrafts = allDrafts.filter((d) => d.status === "approved");
+  for (const draft of approvedDrafts) {
+    actions.push({
+      type: "approved-draft",
+      label: draft.content.slice(0, 120) + (draft.content.length > 120 ? "..." : ""),
+      source: "Ready to post",
+      sourceHref: "/admin/drafts",
+      dotVariant: "complete",
+    });
+  }
 
-  // Recent research
-  const recentResearch = researchDocs.slice(0, 3);
+  const taskProgress = taskStats.total > 0
+    ? Math.round((taskStats.completed / taskStats.total) * 100)
+    : 0;
 
   return (
-    <div className="max-w-3xl space-y-8">
-      <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+    <div className="max-w-4xl space-y-8">
+      <PageHeader title="Dashboard" />
 
-      {/* Status row */}
-      <div className="grid grid-cols-4 gap-4">
-        <Link href="/admin/tasks" className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 hover:bg-zinc-900/60 transition-colors">
-          <p className="text-2xl font-semibold text-zinc-100">{taskStats.urgent}</p>
-          <p className="text-xs text-zinc-500 mt-1">Urgent tasks</p>
-        </Link>
-        <Link href="/admin/drafts" className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 hover:bg-zinc-900/60 transition-colors">
-          <p className="text-2xl font-semibold text-zinc-100">{draftStats.pending}</p>
-          <p className="text-xs text-zinc-500 mt-1">Drafts to review</p>
-        </Link>
-        <Link href="/admin/drafts" className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 hover:bg-zinc-900/60 transition-colors">
-          <p className="text-2xl font-semibold text-zinc-100">{draftStats.approved}</p>
-          <p className="text-xs text-zinc-500 mt-1">Ready to post</p>
-        </Link>
-        <Link href="/admin/research" className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 hover:bg-zinc-900/60 transition-colors">
-          <p className="text-2xl font-semibold text-zinc-100">{researchDocs.length}</p>
-          <p className="text-xs text-zinc-500 mt-1">Research docs</p>
-        </Link>
-      </div>
-
-      {/* Attention needed */}
-      {(urgentTasks.length > 0 || pendingDrafts.length > 0 || approvedDrafts.length > 0) && (
-        <div className="space-y-4">
-          <h2 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Needs attention</h2>
-
-          {urgentTasks.length > 0 && (
-            <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={14} className="text-red-400" />
-                  <span className="text-sm font-medium text-zinc-200">Urgent tasks</span>
-                </div>
-                <Link href="/admin/tasks" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
-                  View all <ArrowUpRight size={10} />
-                </Link>
-              </div>
-              <div className="space-y-2">
-                {urgentTasks.map((task, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <Circle size={12} className="text-zinc-600 shrink-0 mt-0.5" />
-                    <p className="text-sm text-zinc-300">{task.text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {pendingDrafts.length > 0 && (
-            <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <PenLine size={14} className="text-amber-400" />
-                  <span className="text-sm font-medium text-zinc-200">Drafts awaiting review</span>
-                </div>
-                <Link href="/admin/drafts" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
-                  Review <ArrowUpRight size={10} />
-                </Link>
-              </div>
-              <div className="space-y-2">
-                {pendingDrafts.map((draft) => (
-                  <div key={draft.id} className="flex items-start gap-2">
-                    <Clock size={12} className="text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-sm text-zinc-300 line-clamp-1">{draft.content}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {approvedDrafts.length > 0 && (
-            <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 size={14} className="text-green-400" />
-                  <span className="text-sm font-medium text-zinc-200">Approved — ready to post</span>
-                </div>
-                <Link href="/admin/drafts" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
-                  View <ArrowUpRight size={10} />
-                </Link>
-              </div>
-              <div className="space-y-2">
-                {approvedDrafts.map((draft) => (
-                  <div key={draft.id} className="flex items-start gap-2">
-                    <CheckCircle2 size={12} className="text-green-400 shrink-0 mt-0.5" />
-                    <p className="text-sm text-zinc-300 line-clamp-1">{draft.content}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Activity overview */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* X Activity */}
-        <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-200">X / @moltzart</span>
-            <Link href="/admin/drafts" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
-              Drafts <ArrowUpRight size={10} />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-lg font-semibold text-zinc-200">{draftStats.posted}</p>
-              <p className="text-xs text-zinc-500">Posted</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-zinc-200">{draftStats.approved}</p>
-              <p className="text-xs text-zinc-500">Approved</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-zinc-200">{draftStats.pending}</p>
-              <p className="text-xs text-zinc-500">Pending</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-zinc-200">{draftStats.rejected}</p>
-              <p className="text-xs text-zinc-500">Rejected</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Tasks Summary */}
-        <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-200">Tasks</span>
-            <Link href="/admin/tasks" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
-              All tasks <ArrowUpRight size={10} />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-lg font-semibold text-zinc-200">{taskStats.urgent}</p>
-              <p className="text-xs text-zinc-500">Urgent</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-zinc-200">{taskStats.active}</p>
-              <p className="text-xs text-zinc-500">Active</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-zinc-200">{taskStats.blocked}</p>
-              <p className="text-xs text-zinc-500">Blocked</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-zinc-200">{taskStats.completed}</p>
-              <p className="text-xs text-zinc-500">Completed</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Research docs */}
-      {recentResearch.length > 0 && (
+      {/* Zone 1: Action Queue */}
+      {actions.length > 0 ? (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Recent research</h2>
-            <Link href="/admin/research" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
-              All docs <ArrowUpRight size={10} />
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {recentResearch.map((doc) => (
+          <h2 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+            Action queue
+          </h2>
+          <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 divide-y divide-zinc-800/30">
+            {actions.map((item, i) => (
               <Link
-                key={doc.slug}
-                href={`/admin/research/${doc.slug}`}
-                className="flex items-center justify-between rounded-lg border border-zinc-800/50 bg-zinc-900/30 px-4 py-3 hover:bg-zinc-900/60 transition-colors"
+                key={i}
+                href={item.sourceHref}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors first:rounded-t-lg last:rounded-b-lg"
               >
-                <div className="flex items-center gap-2">
-                  <FileText size={14} className="text-zinc-500" />
-                  <span className="text-sm text-zinc-300">{doc.title}</span>
-                </div>
-                <ArrowUpRight size={12} className="text-zinc-600" />
+                <StatusDot variant={item.dotVariant} pulse={item.type === "urgent"} />
+                <span className="text-sm text-zinc-200 flex-1 min-w-0 truncate">
+                  {item.label}
+                </span>
+                <span className="text-[10px] font-medium text-zinc-600 uppercase tracking-wider shrink-0">
+                  {item.source}
+                </span>
               </Link>
             ))}
           </div>
         </div>
+      ) : (
+        <EmptyState icon={CircleCheck} message="All clear — nothing needs attention" />
       )}
 
-      {/* Recurring */}
-      {tasksData.recurring.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Recurring automations</h2>
-          <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="text-xs text-zinc-500 border-b border-zinc-800/50">
-                  <th className="text-left font-medium px-4 py-2.5">Task Name</th>
-                  <th className="text-left font-medium px-4 py-2.5">Runs</th>
-                  <th className="text-left font-medium px-4 py-2.5">Execution</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasksData.recurring.map((t, i) => (
-                  <tr key={i} className="border-b border-zinc-800/30 last:border-0">
-                    <td className="text-left text-sm text-zinc-300 px-4 py-2.5">{t.task}</td>
-                    <td className="text-left text-sm text-zinc-500 px-4 py-2.5 whitespace-nowrap">{t.schedule}</td>
-                    <td className="text-left text-sm text-zinc-600 px-4 py-2.5">{t.method}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Zone 2: Compact Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* X / @moltzart stats */}
+        <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-zinc-200">X / @moltzart</span>
+            <Link
+              href="/admin/drafts"
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+            >
+              Drafts <ArrowUpRight size={10} />
+            </Link>
+          </div>
+          <div className="flex items-center gap-4 text-xs">
+            <span className="text-zinc-300">
+              <span className="font-mono font-medium">{draftStats.posted}</span>{" "}
+              <span className="text-zinc-500">posted</span>
+            </span>
+            <span className="text-zinc-300">
+              <span className="font-mono font-medium">{draftStats.approved}</span>{" "}
+              <span className="text-zinc-500">approved</span>
+            </span>
+            <span className="text-zinc-300">
+              <span className="font-mono font-medium">{draftStats.pending}</span>{" "}
+              <span className="text-zinc-500">pending</span>
+            </span>
+            <span className="text-zinc-300">
+              <span className="font-mono font-medium">{draftStats.rejected}</span>{" "}
+              <span className="text-zinc-500">rejected</span>
+            </span>
           </div>
         </div>
-      )}
+
+        {/* Tasks stats */}
+        <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-zinc-200">Tasks</span>
+            <Link
+              href="/admin/tasks"
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+            >
+              All tasks <ArrowUpRight size={10} />
+            </Link>
+          </div>
+          <div className="flex items-center gap-4 text-xs mb-2">
+            <span className="text-zinc-300">
+              <span className="font-mono font-medium text-red-400">{taskStats.urgent}</span>{" "}
+              <span className="text-zinc-500">urgent</span>
+            </span>
+            <span className="text-zinc-300">
+              <span className="font-mono font-medium text-amber-400">{taskStats.active}</span>{" "}
+              <span className="text-zinc-500">active</span>
+            </span>
+            <span className="text-zinc-300">
+              <span className="font-mono font-medium text-orange-400">{taskStats.blocked}</span>{" "}
+              <span className="text-zinc-500">blocked</span>
+            </span>
+            <span className="text-zinc-300">
+              <span className="font-mono font-medium text-emerald-400">{taskStats.completed}</span>{" "}
+              <span className="text-zinc-500">done</span>
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-emerald-400/60 rounded-full transition-all"
+              style={{ width: `${taskProgress}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-zinc-600 mt-1 font-mono">
+            {taskStats.completed}/{taskStats.total} completed
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

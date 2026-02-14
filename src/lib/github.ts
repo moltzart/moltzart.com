@@ -1,6 +1,40 @@
 const GH_TOKEN = () => process.env.GITHUB_TOKEN!;
 const REPO = "moltzart/openclaw-home";
 
+// --- Frontmatter Parsing ---
+
+interface Frontmatter {
+  meta: Record<string, unknown>;
+  body: string;
+}
+
+function parseFrontmatter(md: string): Frontmatter | null {
+  const match = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+  if (!match) return null;
+
+  const meta: Record<string, unknown> = {};
+  for (const line of match[1].split("\n")) {
+    const kv = line.match(/^(\w[\w_-]*):\s*(.*)$/);
+    if (!kv) continue;
+    const [, key, raw] = kv;
+    const val = raw.trim();
+    // YAML arrays: [a, b, c]
+    if (val.startsWith("[") && val.endsWith("]")) {
+      meta[key] = val.slice(1, -1).split(",").map((s) => s.trim()).filter(Boolean);
+    } else if (val === "true") {
+      meta[key] = true;
+    } else if (val === "false") {
+      meta[key] = false;
+    } else if (/^\d+$/.test(val)) {
+      meta[key] = parseInt(val, 10);
+    } else {
+      meta[key] = val;
+    }
+  }
+
+  return { meta, body: match[2] };
+}
+
 async function ghFetch(path: string, accept = "application/vnd.github.v3+json") {
   return fetch(`https://api.github.com${path}`, {
     headers: {
@@ -16,6 +50,10 @@ export interface ResearchDoc {
   title: string;
   sha: string;
   createdAt: string | null;
+  excerpt?: string;
+  wordCount?: number;
+  tags?: string[];
+  status?: "draft" | "published" | "archived";
 }
 
 export async function fetchResearchList(): Promise<ResearchDoc[]> {
@@ -28,41 +66,81 @@ export async function fetchResearchList(): Promise<ResearchDoc[]> {
   const docs = await Promise.all(
     mdFiles.map(async (f: { name: string; sha: string }) => {
       const slug = f.name.replace(/\.md$/, "");
-      const title = slug
+      let title = slug
         .replace(/-/g, " ")
         .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
       let createdAt: string | null = null;
-      try {
-        const commitsRes = await ghFetch(
-          `/repos/${REPO}/commits?path=research/${encodeURIComponent(f.name)}&per_page=1`
-        );
-        if (commitsRes.ok) {
-          const linkHeader = commitsRes.headers.get("link");
-          const commits = await commitsRes.json();
+      let tags: string[] | undefined;
+      let status: "draft" | "published" | "archived" | undefined;
+      let excerpt: string | undefined;
+      let wordCount: number | undefined;
 
-          if (linkHeader && linkHeader.includes('rel="last"')) {
-            const lastMatch = linkHeader.match(/<([^>]+)>;\s*rel="last"/);
-            if (lastMatch) {
-              const lastRes = await fetch(lastMatch[1], {
-                headers: {
-                  Authorization: `Bearer ${GH_TOKEN()}`,
-                  Accept: "application/vnd.github.v3+json",
-                },
-              });
-              if (lastRes.ok) {
-                const lastCommits = await lastRes.json();
-                const oldest = lastCommits[lastCommits.length - 1];
-                createdAt = oldest?.commit?.author?.date || null;
-              }
-            }
-          } else if (commits.length > 0) {
-            createdAt = commits[commits.length - 1]?.commit?.author?.date || null;
-          }
+      // Fetch content (needed for excerpt + frontmatter check)
+      let fullContent: string | undefined;
+      try {
+        const contentRes = await ghFetch(
+          `/repos/${REPO}/contents/research/${encodeURIComponent(f.name)}`
+        );
+        if (contentRes.ok) {
+          const contentData = await contentRes.json();
+          fullContent = Buffer.from(contentData.content, "base64").toString("utf-8");
         }
       } catch {}
 
-      return { slug, title, sha: f.sha, createdAt };
+      if (fullContent) {
+        const fm = parseFrontmatter(fullContent);
+        const body = fm ? fm.body : fullContent;
+
+        // Extract frontmatter fields if present
+        if (fm?.meta.title) title = fm.meta.title as string;
+        if (fm?.meta.created) createdAt = fm.meta.created as string;
+        if (fm?.meta.tags) tags = fm.meta.tags as string[];
+        if (fm?.meta.status) status = fm.meta.status as "draft" | "published" | "archived";
+
+        // Excerpt from body
+        const plainLines = body
+          .split("\n")
+          .filter((l: string) => !l.startsWith("#") && !l.startsWith("---") && l.trim().length > 0);
+        const plainText = plainLines.join(" ").replace(/[*_`\[\]]/g, "");
+        excerpt = plainText.slice(0, 150).trim();
+        if (plainText.length > 150) excerpt += "...";
+        wordCount = body.split(/\s+/).filter(Boolean).length;
+      }
+
+      // Only do expensive git commit lookup if frontmatter didn't provide created date
+      if (!createdAt) {
+        try {
+          const commitsRes = await ghFetch(
+            `/repos/${REPO}/commits?path=research/${encodeURIComponent(f.name)}&per_page=1`
+          );
+          if (commitsRes.ok) {
+            const linkHeader = commitsRes.headers.get("link");
+            const commits = await commitsRes.json();
+
+            if (linkHeader && linkHeader.includes('rel="last"')) {
+              const lastMatch = linkHeader.match(/<([^>]+)>;\s*rel="last"/);
+              if (lastMatch) {
+                const lastRes = await fetch(lastMatch[1], {
+                  headers: {
+                    Authorization: `Bearer ${GH_TOKEN()}`,
+                    Accept: "application/vnd.github.v3+json",
+                  },
+                });
+                if (lastRes.ok) {
+                  const lastCommits = await lastRes.json();
+                  const oldest = lastCommits[lastCommits.length - 1];
+                  createdAt = oldest?.commit?.author?.date || null;
+                }
+              }
+            } else if (commits.length > 0) {
+              createdAt = commits[commits.length - 1]?.commit?.author?.date || null;
+            }
+          }
+        } catch {}
+      }
+
+      return { slug, title, sha: f.sha, createdAt, excerpt, wordCount, tags, status };
     })
   );
 
@@ -89,9 +167,10 @@ export async function fetchResearchDoc(slug: string): Promise<ResearchDocDetail 
   if (!res.ok) return null;
 
   const fileData = await res.json();
-  const content = Buffer.from(fileData.content, "base64").toString("utf-8");
-  const titleMatch = content.match(/^#\s+(.+)/m);
-  const title = titleMatch ? titleMatch[1] : slug.replace(/-/g, " ");
+  const raw = Buffer.from(fileData.content, "base64").toString("utf-8");
+  const fm = parseFrontmatter(raw);
+  const content = fm ? fm.body : raw;
+  const title = (fm?.meta.title as string) || content.match(/^#\s+(.+)/m)?.[1] || slug.replace(/-/g, " ");
 
   return { title, content, sha: fileData.sha };
 }
@@ -264,32 +343,74 @@ export interface NewsletterArticle {
   description: string;
   source: string;
   link: string;
+  category?: string;
 }
 
 export interface NewsletterDigest {
   date: string;
   label: string;
   articles: NewsletterArticle[];
+  articleCount?: number;
 }
 
-function parseDigestMd(md: string): NewsletterArticle[] {
-  const articles: NewsletterArticle[] = [];
-  const lines = md.split("\n");
+function parseDigestMd(md: string): { articles: NewsletterArticle[]; articleCount?: number } {
+  const fm = parseFrontmatter(md);
+  const body = fm ? fm.body : md;
+  const isV2 = fm?.meta.format === "newsletter-v2";
+  const articleCount = typeof fm?.meta.article_count === "number" ? fm.meta.article_count : undefined;
 
-  for (const line of lines) {
-    // Match: - **"Title"** — Description [Source: Name](url)
-    const match = line.match(/^-\s+\*\*(.+?)\*\*\s*—\s*(.+?)\s*\[Source:\s*(.+?)\]\((.+?)\)\s*$/);
-    if (match) {
-      articles.push({
-        title: match[1].replace(/^"|"$/g, ""),
-        description: match[2].trim().replace(/\.$/, ""),
-        source: match[3].trim(),
-        link: match[4].trim(),
-      });
+  const articles: NewsletterArticle[] = [];
+
+  if (isV2) {
+    // v2: ### Title + metadata lines + description body
+    const lines = body.split("\n");
+    let i = 0;
+    while (i < lines.length) {
+      const h3 = lines[i].match(/^### (.+)$/);
+      if (!h3) { i++; continue; }
+
+      const title = h3[1].trim();
+      let source = "";
+      let link = "";
+      let category: string | undefined;
+      const descLines: string[] = [];
+      i++;
+
+      while (i < lines.length) {
+        const cl = lines[i];
+        if (cl.startsWith("### ")) break;
+        const meta = cl.match(/^- (source|link|category):\s*(.+)$/);
+        if (meta) {
+          if (meta[1] === "source") source = meta[2].trim();
+          else if (meta[1] === "link") link = meta[2].trim();
+          else if (meta[1] === "category") category = meta[2].trim();
+          i++; continue;
+        }
+        if (cl.trim() !== "") descLines.push(cl.trim());
+        i++;
+      }
+
+      const description = descLines.join(" ").trim();
+      if (title && source && link) {
+        articles.push({ title, description, source, link, category });
+      }
+    }
+  } else {
+    // Legacy: - **"Title"** — Description [Source: Name](url)
+    for (const line of body.split("\n")) {
+      const match = line.match(/^-\s+\*\*(.+?)\*\*\s*—\s*(.+?)\s*\[Source:\s*(.+?)\]\((.+?)\)\s*$/);
+      if (match) {
+        articles.push({
+          title: match[1].replace(/^"|"$/g, ""),
+          description: match[2].trim().replace(/\.$/, ""),
+          source: match[3].trim(),
+          link: match[4].trim(),
+        });
+      }
     }
   }
 
-  return articles;
+  return { articles, articleCount };
 }
 
 export async function fetchNewsletterDigests(): Promise<NewsletterDigest[]> {
@@ -328,9 +449,9 @@ export async function fetchNewsletterDigests(): Promise<NewsletterDigest[]> {
     else if (diffDays === 1) label = "Yesterday";
     else label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
-    const articles = parseDigestMd(content);
+    const { articles, articleCount } = parseDigestMd(content);
     if (articles.length > 0) {
-      digests.push({ date, label, articles });
+      digests.push({ date, label, articles, articleCount });
     }
   }
 
@@ -343,6 +464,9 @@ interface Task {
   text: string;
   status: "done" | "partial" | "open";
   detail?: string;
+  due?: string;
+  effort?: "S" | "M" | "L" | "XL";
+  blockedBy?: string;
 }
 
 interface Section {
@@ -370,6 +494,9 @@ function parseTaskText(raw: string): { text: string; detail?: string } {
 }
 
 function parseTodoMd(md: string): ParsedTasks {
+  const fm = parseFrontmatter(md);
+  const body = fm ? fm.body : md;
+
   const sections: Section[] = [];
   const recurring: RecurringTask[] = [];
 
@@ -382,14 +509,16 @@ function parseTodoMd(md: string): ParsedTasks {
     COMPLETED: "completed",
   };
 
-  const lines = md.split("\n");
+  const lines = body.split("\n");
   let currentSection: Section | null = null;
   let inRecurring = false;
+  let lastTask: Task | null = null;
 
   for (const line of lines) {
     const sectionMatch = line.match(/^## .+?(URGENT|SCHEDULED|BACKLOG|ACTIVE|BLOCKED|COMPLETED)/);
     if (sectionMatch) {
       inRecurring = false;
+      lastTask = null;
       const key = sectionMatch[1];
       const id = sectionMap[key] || key.toLowerCase();
       let title = key.charAt(0) + key.slice(1).toLowerCase();
@@ -404,6 +533,7 @@ function parseTodoMd(md: string): ParsedTasks {
     if (line.match(/RECURRING/i)) {
       inRecurring = true;
       currentSection = null;
+      lastTask = null;
       continue;
     }
 
@@ -417,21 +547,40 @@ function parseTodoMd(md: string): ParsedTasks {
       continue;
     }
 
+    // Indented metadata sub-items (v2): "  - due: 2026-02-20"
+    if (lastTask && line.match(/^\s+-\s+(due|effort|blocked-by):\s*/)) {
+      const metaMatch = line.match(/^\s+-\s+(due|effort|blocked-by):\s*(.+)$/);
+      if (metaMatch) {
+        const [, key, val] = metaMatch;
+        if (key === "due") lastTask.due = val.trim();
+        else if (key === "effort") lastTask.effort = val.trim() as "S" | "M" | "L" | "XL";
+        else if (key === "blocked-by") lastTask.blockedBy = val.trim();
+      }
+      continue;
+    }
+
     if (currentSection && line.match(/^\s*-\s*\[/)) {
       const doneMatch = line.match(/^\s*-\s*\[x\]\s*(.*)/i);
       const partialMatch = line.match(/^\s*-\s*\[~\]\s*(.*)/);
       const openMatch = line.match(/^\s*-\s*\[ \]\s*(.*)/);
 
+      lastTask = null;
       if (doneMatch) {
         const { text, detail } = parseTaskText(doneMatch[1]);
-        currentSection.tasks.push({ text, status: "done", detail });
+        lastTask = { text, status: "done", detail };
+        currentSection.tasks.push(lastTask);
       } else if (partialMatch) {
         const { text, detail } = parseTaskText(partialMatch[1]);
-        currentSection.tasks.push({ text, status: "partial", detail });
+        lastTask = { text, status: "partial", detail };
+        currentSection.tasks.push(lastTask);
       } else if (openMatch) {
         const { text, detail } = parseTaskText(openMatch[1]);
-        currentSection.tasks.push({ text, status: "open", detail });
+        lastTask = { text, status: "open", detail };
+        currentSection.tasks.push(lastTask);
       }
+    } else if (!line.match(/^\s+-\s/)) {
+      // Non-indented, non-task line resets lastTask
+      lastTask = null;
     }
   }
 
@@ -459,6 +608,7 @@ export type DraftStatus = "pending" | "approved" | "posted" | "rejected";
 export interface Draft {
   id: string;
   date: string;
+  time?: string;
   type: "original" | "reply";
   replyTo?: string;
   replyContext?: string;
@@ -466,6 +616,7 @@ export interface Draft {
   status: DraftStatus;
   feedback?: string;
   tweetId?: string;
+  priority?: "high" | "normal" | "low";
 }
 
 export interface DraftDay {
@@ -480,8 +631,12 @@ export interface DraftsData {
 }
 
 function parseDraftsMd(md: string): Draft[] {
+  const fm = parseFrontmatter(md);
+  const body = fm ? fm.body : md;
+  const isV2 = fm?.meta.format === "drafts-v2";
+
   const drafts: Draft[] = [];
-  const lines = md.split("\n");
+  const lines = body.split("\n");
   let currentSection: DraftStatus = "pending";
   let i = 0;
 
@@ -494,7 +649,72 @@ function parseDraftsMd(md: string): Draft[] {
     if (line.match(/^## Posted/i)) { currentSection = "posted"; i++; continue; }
     if (line.match(/^## Rejected/i)) { currentSection = "rejected"; i++; continue; }
 
-    // Parse draft entries: **DATE | TYPE**
+    // v2 format: ### 2026-02-14 14:32 | Original
+    if (isV2) {
+      const v2Match = line.match(/^### (\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?\s*\|\s*(.+)$/);
+      if (v2Match) {
+        const date = v2Match[1];
+        const time = v2Match[2] || undefined;
+        const typeStr = v2Match[3].trim();
+
+        let type: "original" | "reply" = "original";
+        let replyTo: string | undefined;
+        let replyContext: string | undefined;
+        if (typeStr.match(/Reply to @/i)) {
+          type = "reply";
+          const rm = typeStr.match(/Reply to @(\S+)/i);
+          if (rm) replyTo = rm[1];
+        }
+
+        // Collect metadata, content, feedback
+        let priority: "high" | "normal" | "low" | undefined;
+        let tweetId: string | undefined;
+        let content = "";
+        let feedback = "";
+        i++;
+
+        while (i < lines.length) {
+          const cl = lines[i];
+          const metaMatch = cl.match(/^- ([\w-]+):\s*(.+)$/);
+          if (metaMatch) {
+            const [, k, v] = metaMatch;
+            if (k === "priority") priority = v.trim() as "high" | "normal" | "low";
+            else if (k === "context") replyContext = v.trim();
+            else if (k === "tweet-id") tweetId = v.trim();
+            i++; continue;
+          }
+          if (cl.startsWith("> ")) {
+            const text = cl.slice(2);
+            // Blank blockquote line = paragraph break
+            content += (content ? "\n" : "") + (text.trim() === "" ? "\n" : text.trim());
+            i++; continue;
+          }
+          if (cl.match(/^_Feedback:/) && cl.endsWith("_")) {
+            feedback = cl.slice(1, -1).replace(/^Feedback:\s*/, "").trim();
+            i++; continue;
+          }
+          // Legacy italic feedback
+          if (cl.startsWith("_") && cl.endsWith("_")) {
+            feedback = cl.slice(1, -1).trim();
+            i++; continue;
+          }
+          if (cl.trim() === "") { i++; continue; }
+          if (cl.startsWith("### ") || cl.startsWith("## ")) break;
+          i++;
+        }
+
+        // Clean up double newlines in content
+        content = content.replace(/\n{3,}/g, "\n\n").trim();
+
+        if (content) {
+          const id = `${date}-${type}-${replyTo || "original"}-${drafts.length}`;
+          drafts.push({ id, date, time, type, replyTo, replyContext, content, status: currentSection, feedback: feedback || undefined, tweetId, priority });
+        }
+        continue;
+      }
+    }
+
+    // Legacy v1 format: **DATE | TYPE**
     const entryMatch = line.match(/^\*\*(\d{4}-\d{2}-\d{2})(?:\s+[\d:]+)?\s*\|\s*(.+?)\*\*\s*(.*)?$/);
     if (entryMatch) {
       const date = entryMatch[1];
@@ -623,6 +843,8 @@ export interface RadarDay {
   sections: { heading: string; items: RadarItem[] }[];
   clusters?: string[];
   rawMarkdown: string;
+  scanSources?: string[];
+  itemCount?: number;
 }
 
 function parseRadarSection(heading: string, lines: string[]): RadarItem[] {
@@ -749,10 +971,15 @@ function parseRadarSection(heading: string, lines: string[]): RadarItem[] {
   return items;
 }
 
-function parseRadarMd(md: string): { sections: { heading: string; items: RadarItem[] }[]; clusters: string[] } {
+function parseRadarMd(md: string): { sections: { heading: string; items: RadarItem[] }[]; clusters: string[]; scanSources?: string[]; itemCount?: number } {
+  const fm = parseFrontmatter(md);
+  const body = fm ? fm.body : md;
+  const scanSources = fm?.meta.scan_sources as string[] | undefined;
+  const itemCount = typeof fm?.meta.item_count === "number" ? fm.meta.item_count : undefined;
+
   const sections: { heading: string; items: RadarItem[] }[] = [];
   const clusters: string[] = [];
-  const lines = md.split("\n");
+  const lines = body.split("\n");
   let currentHeading = "";
   let currentLines: string[] = [];
   let inClusters = false;
@@ -803,7 +1030,7 @@ function parseRadarMd(md: string): { sections: { heading: string; items: RadarIt
     if (items.length > 0) sections.push({ heading: currentHeading, items });
   }
 
-  return { sections, clusters };
+  return { sections, clusters, scanSources, itemCount };
 }
 
 export async function fetchRadarDates(): Promise<string[]> {
@@ -822,7 +1049,7 @@ export async function fetchRadarDay(date: string): Promise<RadarDay | null> {
   if (!res.ok) return null;
   const fileData = await res.json();
   const content = Buffer.from(fileData.content, "base64").toString("utf-8");
-  const { sections, clusters } = parseRadarMd(content);
+  const { sections, clusters, scanSources, itemCount } = parseRadarMd(content);
 
   const d = new Date(date + "T12:00:00");
   const now = new Date();
@@ -833,7 +1060,7 @@ export async function fetchRadarDay(date: string): Promise<RadarDay | null> {
   const diffDays = Math.floor((today.getTime() - docDate.getTime()) / 86400000);
   const label = diffDays === 0 ? "Today" : diffDays === 1 ? "Yesterday" : d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
-  return { date, label, sections, clusters, rawMarkdown: content };
+  return { date, label, sections, clusters, rawMarkdown: content, scanSources, itemCount };
 }
 
 export async function updateDraftsFile(content: string, sha: string, message: string): Promise<boolean> {

@@ -20,7 +20,7 @@ export default async function DraftDay({
   const pending = day.drafts.filter((d) => d.status === "pending").length;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <div className="mb-8">
         <Link
           href="/admin/drafts"

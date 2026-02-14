@@ -136,8 +136,7 @@ text-xs font-mono                         // Code, counts (12px)
 max-w-xl mx-auto                  // 576px centered
 
 // Admin pages
-max-w-2xl                          // 672px (tasks, research list)
-max-w-3xl                          // 768px (dashboard)
+max-w-4xl                          // 896px (all admin pages)
 
 // Padding
 p-6 md:p-8                         // Page padding (public)
@@ -165,7 +164,7 @@ space-y-6    // Major section spacing
 
 ### Admin Page Structure
 ```tsx
-<div className="max-w-2xl">                          {/* or max-w-3xl */}
+<div className="max-w-4xl">
   <h1 className="text-xl font-semibold tracking-tight mb-6">
     Page Title
   </h1>
@@ -518,7 +517,7 @@ className="will-change-transform"
 
 When building a new page or component, verify:
 
-- [ ] Uses appropriate container max-width (`max-w-xl`, `max-w-2xl`, or `max-w-3xl`)
+- [ ] Uses appropriate container max-width (`max-w-xl` for public, `max-w-4xl` for admin)
 - [ ] H1 uses `text-xl font-semibold tracking-tight`
 - [ ] Section labels use `text-xs font-medium text-zinc-500 uppercase tracking-wider`
 - [ ] Cards use `border-zinc-800/50`, `bg-zinc-900/30`, `rounded-lg`
@@ -539,7 +538,7 @@ When building a new page or component, verify:
 4. **Wrong text color** — Don't use `text-white` (too harsh). Use `text-zinc-100` or `text-zinc-200`.
 5. **Forgotten `shrink-0` on icons** — Icons in flex containers collapse. Add `shrink-0`.
 6. **Missing transitions** — Add `transition-colors` to elements with hover states.
-7. **Wrong container width** — Admin pages use `max-w-2xl` or `max-w-3xl`, not `max-w-xl`.
+7. **Wrong container width** — Admin pages use `max-w-4xl`, public pages use `max-w-xl`.
 8. **Uppercase without tracking** — Small uppercase text needs `tracking-wider`.
 9. **Badges/status next to page title** — Admin page titles are `<h1>` only. No badges, counters, or status indicators inline with the title. Status belongs in the page content (per-row badges on list items).
 

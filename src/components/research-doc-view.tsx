@@ -2,18 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import Link from "next/link";
-import { ArrowLeft, Copy, Download, Trash2, Check } from "lucide-react";
+import { ArrowLeft, Copy, Download, Trash2, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { MarkdownRenderer } from "@/components/admin/markdown-renderer";
 
 interface Props {
   slug: string;
   title: string;
   content: string;
+  prevSlug?: string | null;
+  prevTitle?: string | null;
+  nextSlug?: string | null;
+  nextTitle?: string | null;
 }
 
-export function ResearchDocView({ slug, title, content }: Props) {
+export function ResearchDocView({ slug, content, prevSlug, prevTitle, nextSlug, nextTitle }: Props) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -57,7 +60,7 @@ export function ResearchDocView({ slug, title, content }: Props) {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <Link
           href="/admin/research"
@@ -100,9 +103,41 @@ export function ResearchDocView({ slug, title, content }: Props) {
         </div>
       </div>
 
-      <article className="prose prose-invert prose-zinc max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-zinc-300 prose-p:leading-relaxed prose-li:text-zinc-300 prose-strong:text-zinc-100 prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-code:text-amber-300 prose-code:bg-zinc-800/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-table:text-sm prose-th:text-zinc-400 prose-th:font-medium prose-td:text-zinc-300 prose-hr:border-zinc-800">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-      </article>
+      <MarkdownRenderer content={content} />
+
+      {/* Prev/Next navigation */}
+      {(prevSlug || nextSlug) && (
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-zinc-800/50">
+          {prevSlug ? (
+            <Link
+              href={`/admin/research/${prevSlug}`}
+              className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors group"
+            >
+              <ChevronLeft size={14} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+              <div className="text-left">
+                <span className="text-[10px] text-zinc-600 uppercase tracking-wider block">Previous</span>
+                <span className="line-clamp-1">{prevTitle}</span>
+              </div>
+            </Link>
+          ) : (
+            <div />
+          )}
+          {nextSlug ? (
+            <Link
+              href={`/admin/research/${nextSlug}`}
+              className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors group text-right"
+            >
+              <div>
+                <span className="text-[10px] text-zinc-600 uppercase tracking-wider block">Next</span>
+                <span className="line-clamp-1">{nextTitle}</span>
+              </div>
+              <ChevronRight size={14} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+            </Link>
+          ) : (
+            <div />
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -49,7 +49,8 @@ npm run lint      # ESLint
 - **UI patterns are documented** — see `UI-GUIDELINES.md` for colors, typography, spacing, components, and animation rules
 - **shadcn/ui** — components live in `src/components/ui/`, add new ones via `npx shadcn@latest add <component>`
 - **Path aliases** — `@/components`, `@/lib`, `@/hooks` (configured in tsconfig)
-- **Admin pages** use `max-w-2xl` or `max-w-3xl` containers; public pages use `max-w-xl`
+- **Admin pages** use `max-w-4xl` containers; public pages use `max-w-xl`
+- **Shared admin components** live in `src/components/admin/` (PageHeader, MarkdownRenderer, EmptyState, StatusDot)
 
 ## Deployment Rules
 
