@@ -1,5 +1,14 @@
 # Project Log
 
+## 2026-02-15 (session 5)
+- Admin UI/UX cleanup: unified card pattern across all pages (Tasks, Content Ideas, Newsletter, Radar, Research). Each section now uses bordered container + header row with icon, title, and count — matching the dashboard's Radar Highlights card.
+- Removed `max-w-4xl` constraints from all admin pages — cards now go full width like the dashboard.
+- Grouped sidebar nav by workflow stage: Inputs (Radar, Research), Outputs (Content Ideas, Newsletter), Operations (Tasks). Uses `SidebarGroup` + `SidebarGroupLabel` for visual separators.
+- Added teal accent color to match Moltzart avatar. Applied to: sidebar active state (CSS variables), card header icons, header action links, radar active date pills.
+- Removed `PageHeader` component usage from all pages (component file still exists but unused).
+- Fixed radar highlights "—" showing next to "Today's Radar" when no scan data exists.
+- No agent-facing changes — all API endpoints, schemas, and ingest routes unchanged.
+
 ## 2026-02-15 (session 4)
 - Completed GitHub → Neon migration: tasks and research docs now read from Neon. Rewrote `tasks-view.tsx` as flat priority-sorted list (dropped section grouping + recurring). Created `tasks` and `research_docs` tables, added `/api/ingest/task` and `/api/ingest/research-doc` endpoints. Deleted `src/lib/github.ts` entirely — no more GitHub API dependency. Net: +496 lines, -1,841 lines.
 - **Decision:** Removed content feedback and newsletter angles features. Both tables had zero rows — Pica never populated them despite audit fixes. Dropped tables from Neon, removed DB functions, deleted ingest routes, removed signals sidebar from dashboard, deleted `signals-panel.tsx`.
