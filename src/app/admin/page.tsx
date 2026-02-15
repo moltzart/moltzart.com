@@ -10,8 +10,6 @@ import {
   fetchResearchDocs,
   fetchRadarDatesDb,
   fetchRadarItemsByDate,
-  fetchRecentFeedback,
-  fetchRecentAngles,
   fetchOpenResearchRequests,
   type DbDraft,
 } from "@/lib/db";
@@ -51,13 +49,11 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 export default async function AdminDashboard() {
-  const [tasks, draftsRows, radarDates, feedback, angles, researchRequests, researchDocs] =
+  const [tasks, draftsRows, radarDates, researchRequests, researchDocs] =
     await Promise.all([
       fetchTasksDb(),
       fetchDraftsDb(),
       fetchRadarDatesDb(),
-      fetchRecentFeedback(),
-      fetchRecentAngles(),
       fetchOpenResearchRequests(),
       fetchResearchDocs(),
     ]);
@@ -203,24 +199,11 @@ export default async function AdminDashboard() {
         <EmptyState icon={CircleCheck} message="All clear — nothing needs attention" />
       )}
 
-      {/* Row 3: Radar + Signals (2-column on desktop) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Radar — takes 3/5 */}
-        <div className="lg:col-span-3">
-          <RadarHighlights
-            date={latestDate || "—"}
-            items={latestRadar?.items || []}
-          />
-        </div>
-
-        {/* Signals sidebar — takes 2/5 */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Content Feedback */}
-          <SignalsFeedbackCard feedback={feedback} />
-          {/* Strategic Angles */}
-          <SignalsAnglesCard angles={angles} />
-        </div>
-      </div>
+      {/* Row 3: Radar highlights */}
+      <RadarHighlights
+        date={latestDate || "—"}
+        items={latestRadar?.items || []}
+      />
 
       {/* Row 4: Recent Research (condensed) */}
       {recentResearch.length > 0 && (
@@ -272,72 +255,3 @@ export default async function AdminDashboard() {
   );
 }
 
-// Inline sub-components for the signals sidebar (keep in same file — they're layout-specific)
-
-function SignalsFeedbackCard({ feedback }: { feedback: Awaited<ReturnType<typeof fetchRecentFeedback>> }) {
-  const signalColor = (signal: string) => {
-    const lower = signal.toLowerCase();
-    if (lower === "positive" || lower === "engage" || lower === "resonance") return "bg-emerald-400";
-    if (lower === "negative" || lower === "avoid" || lower === "drop") return "bg-red-400";
-    return "bg-zinc-400";
-  };
-
-  return (
-    <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800/30">
-        <span className="size-2 rounded-full bg-zinc-500" />
-        <span className="text-xs font-medium text-zinc-300">Content Feedback</span>
-        {feedback.length > 0 && (
-          <span className="text-[10px] font-mono text-zinc-600">{feedback.length}</span>
-        )}
-      </div>
-      {feedback.length === 0 ? (
-        <p className="px-4 py-6 text-xs text-zinc-600 text-center">No feedback yet</p>
-      ) : (
-        <div className="divide-y divide-zinc-800/20">
-          {feedback.slice(0, 5).map((f) => (
-            <div key={f.id} className="px-4 py-2 flex items-start gap-2">
-              <span className={`mt-1.5 size-1.5 rounded-full shrink-0 ${signalColor(f.signal)}`} />
-              <div className="min-w-0 flex-1">
-                <span className="text-xs text-zinc-300 line-clamp-1">{f.topic}</span>
-                {f.reason && (
-                  <p className="text-[10px] text-zinc-600 line-clamp-1">{f.reason}</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SignalsAnglesCard({ angles }: { angles: Awaited<ReturnType<typeof fetchRecentAngles>> }) {
-  return (
-    <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800/30">
-        <span className="size-2 rounded-full bg-amber-400/60" />
-        <span className="text-xs font-medium text-zinc-300">Strategic Angles</span>
-        {angles.length > 0 && (
-          <span className="text-[10px] font-mono text-zinc-600">{angles.length}</span>
-        )}
-      </div>
-      {angles.length === 0 ? (
-        <p className="px-4 py-6 text-xs text-zinc-600 text-center">No angles yet</p>
-      ) : (
-        <div className="divide-y divide-zinc-800/20">
-          {angles.slice(0, 5).map((a) => (
-            <div key={a.id} className="px-4 py-2">
-              <p className="text-xs text-zinc-300 line-clamp-2">{a.angle}</p>
-              {a.supporting_items && a.supporting_items.length > 0 && (
-                <span className="text-[10px] font-mono text-zinc-600">
-                  {a.supporting_items.length} supporting items
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
