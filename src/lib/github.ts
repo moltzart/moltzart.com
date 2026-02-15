@@ -1,3 +1,12 @@
+import {
+  fetchRadarDatesDb,
+  fetchRadarItemsByDate,
+  fetchRadarClustersByDate,
+  fetchNewsletterArticlesDb,
+  fetchDraftsDb,
+  updateDraftStatus as dbUpdateDraftStatus,
+} from "./db";
+
 const GH_TOKEN = () => process.env.GITHUB_TOKEN!;
 const REPO = "moltzart/openclaw-home";
 
@@ -414,28 +423,25 @@ function parseDigestMd(md: string): { articles: NewsletterArticle[]; articleCoun
 }
 
 export async function fetchNewsletterDigests(): Promise<NewsletterDigest[]> {
-  const res = await ghFetch(`/repos/${REPO}/contents/memory`);
-  if (!res.ok) return [];
+  const rows = await fetchNewsletterArticlesDb();
+  if (rows.length === 0) return [];
 
-  const files = await res.json();
-  const digestFiles = files
-    .filter((f: { name: string }) => f.name.match(/^newsletter-digest-\d{4}-\d{2}-\d{2}\.md$/))
-    .sort((a: { name: string }, b: { name: string }) => b.name.localeCompare(a.name));
+  // Group by digest_date
+  const byDate = new Map<string, NewsletterArticle[]>();
+  for (const r of rows) {
+    const date = r.digest_date.slice(0, 10);
+    if (!byDate.has(date)) byDate.set(date, []);
+    byDate.get(date)!.push({
+      title: r.title,
+      description: r.description || "",
+      source: r.source || "",
+      link: r.link || "",
+      category: r.category || undefined,
+    });
+  }
 
   const digests: NewsletterDigest[] = [];
-
-  for (const file of digestFiles) {
-    const contentRes = await ghFetch(
-      `/repos/${REPO}/contents/memory/${encodeURIComponent(file.name)}`
-    );
-    if (!contentRes.ok) continue;
-
-    const fileData = await contentRes.json();
-    const content = Buffer.from(fileData.content, "base64").toString("utf-8");
-    const dateMatch = file.name.match(/(\d{4}-\d{2}-\d{2})/);
-    if (!dateMatch) continue;
-
-    const date = dateMatch[1];
+  for (const [date, articles] of byDate) {
     const d = new Date(date + "T12:00:00");
     const now = new Date();
     const today = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
@@ -449,10 +455,7 @@ export async function fetchNewsletterDigests(): Promise<NewsletterDigest[]> {
     else if (diffDays === 1) label = "Yesterday";
     else label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
-    const { articles, articleCount } = parseDigestMd(content);
-    if (articles.length > 0) {
-      digests.push({ date, label, articles, articleCount });
-    }
+    digests.push({ date, label, articles, articleCount: articles.length });
   }
 
   return digests;
@@ -810,12 +813,21 @@ function groupDraftsByDay(drafts: Draft[]): DraftDay[] {
 }
 
 export async function fetchDrafts(): Promise<DraftsData> {
-  const res = await ghFetch(`/repos/${REPO}/contents/memory/x-drafts.md`);
-  if (!res.ok) return { days: [], sha: "" };
-  const fileData = await res.json();
-  const content = Buffer.from(fileData.content, "base64").toString("utf-8");
-  const drafts = parseDraftsMd(content);
-  return { days: groupDraftsByDay(drafts), sha: fileData.sha };
+  const rows = await fetchDraftsDb();
+  const drafts: Draft[] = rows.map((r) => ({
+    id: r.id,
+    date: r.date.slice(0, 10),
+    time: r.time || undefined,
+    type: r.type as "original" | "reply",
+    replyTo: r.reply_to || undefined,
+    replyContext: r.reply_context || undefined,
+    content: r.content,
+    status: r.status as DraftStatus,
+    feedback: r.feedback || undefined,
+    tweetId: r.tweet_id || undefined,
+    priority: (r.priority as "high" | "normal" | "low") || undefined,
+  }));
+  return { days: groupDraftsByDay(drafts), sha: "" };
 }
 
 export async function fetchDraftsRaw(): Promise<{ content: string; sha: string } | null> {
@@ -1039,22 +1051,38 @@ function parseRadarMd(md: string): { sections: { heading: string; items: RadarIt
 }
 
 export async function fetchRadarDates(): Promise<string[]> {
-  const res = await ghFetch(`/repos/${REPO}/contents/memory`);
-  if (!res.ok) return [];
-  const files = await res.json();
-  return files
-    .filter((f: { name: string }) => f.name.match(/^content-radar-\d{4}-\d{2}-\d{2}\.md$/))
-    .map((f: { name: string }) => f.name.match(/(\d{4}-\d{2}-\d{2})/)![1])
-    .sort((a: string, b: string) => b.localeCompare(a));
+  return fetchRadarDatesDb();
 }
 
 export async function fetchRadarDay(date: string): Promise<RadarDay | null> {
-  const filename = `content-radar-${date}.md`;
-  const res = await ghFetch(`/repos/${REPO}/contents/memory/${encodeURIComponent(filename)}`);
-  if (!res.ok) return null;
-  const fileData = await res.json();
-  const content = Buffer.from(fileData.content, "base64").toString("utf-8");
-  const { sections, clusters, scanSources, itemCount } = parseRadarMd(content);
+  const [items, clusters] = await Promise.all([
+    fetchRadarItemsByDate(date),
+    fetchRadarClustersByDate(date),
+  ]);
+
+  if (items.length === 0 && clusters.length === 0) return null;
+
+  // Group items by section, preserving order
+  const sectionMap = new Map<string, RadarItem[]>();
+  const scanSources = new Set<string>();
+  for (const item of items) {
+    if (!sectionMap.has(item.section)) sectionMap.set(item.section, []);
+    sectionMap.get(item.section)!.push({
+      title: item.title,
+      source: item.source_name || item.section,
+      link: item.source_url || "",
+      lane: item.lane,
+      note: (item.why_bullets || []).join("\n"),
+    });
+    if (item.scan_source) scanSources.add(item.scan_source);
+  }
+
+  const sections = Array.from(sectionMap.entries()).map(([heading, sectionItems]) => ({
+    heading,
+    items: sectionItems,
+  }));
+
+  const clusterTitles = clusters.map((c) => c.title);
 
   const d = new Date(date + "T12:00:00");
   const now = new Date();
@@ -1065,7 +1093,15 @@ export async function fetchRadarDay(date: string): Promise<RadarDay | null> {
   const diffDays = Math.floor((today.getTime() - docDate.getTime()) / 86400000);
   const label = diffDays === 0 ? "Today" : diffDays === 1 ? "Yesterday" : d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
-  return { date, label, sections, clusters, rawMarkdown: content, scanSources, itemCount };
+  return {
+    date,
+    label,
+    sections,
+    clusters: clusterTitles.length > 0 ? clusterTitles : undefined,
+    rawMarkdown: "",
+    scanSources: scanSources.size > 0 ? Array.from(scanSources) : undefined,
+    itemCount: items.length,
+  };
 }
 
 export async function updateDraftsFile(content: string, sha: string, message: string): Promise<boolean> {
