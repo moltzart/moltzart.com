@@ -996,7 +996,7 @@ function parseRadarMd(md: string): { sections: { heading: string; items: RadarIt
       continue;
     }
 
-    if (line.match(/^## Scan Quality/i) || line.match(/^---$/)) {
+    if (line.match(/^## Scan Quality/i)) {
       if (inClusters) continue;
       if (currentHeading && currentLines.length > 0) {
         const items = parseRadarSection(currentHeading, currentLines);
@@ -1004,6 +1004,11 @@ function parseRadarMd(md: string): { sections: { heading: string; items: RadarIt
       }
       currentHeading = "";
       currentLines = [];
+      continue;
+    }
+
+    // Skip --- separators but don't flush section
+    if (line.match(/^---$/)) {
       continue;
     }
 
