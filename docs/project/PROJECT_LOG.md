@@ -8,6 +8,9 @@
 - **Sidebar restructured:** Dashboard, Inputs (Radar, Engage, Newsletter), Operations (Tasks). Removed Outputs group entirely.
 - **openclaw-home updated:** Added engage endpoint to AGENTS.md Data Layer section, removed draft/research endpoints, added routing rules. Updated Pica delegation in STANDING-ORDERS.md with 3 output streams. Paused X Draft Review (Moltzart no longer tweets).
 - **Decision:** Newsletter moved from Outputs to Inputs — it's curated content Pica finds for Matt to pick from, not Matt's output.
+- **Pica routing fix:** Updated `workspace-content/AGENTS.md` — Morning X Scan now posts to `/api/ingest/engage` instead of radar. Removed stale endpoints (angles, feedback, research-request). Added explicit rule: no Telegram for scan results, API only.
+- **Cross-project dependency:** Added "Agent Dependency" section to moltzart CLAUDE.md noting which openclaw-home files reference ingest endpoints. Added launchd workspace-sync job on Mac Mini (every 5 min `git pull --ff-only`) so Moltzart sees external edits without burning tokens.
+- **Decision:** System-level cron for workspace sync beats agent-level `git pull` in boot sequence — zero token cost, always current.
 
 ## 2026-02-15 (session 5)
 - Admin UI/UX cleanup: unified card pattern across all pages — bordered container + header row with icon/title/count. Removed `max-w-4xl` constraints, all pages now full width. Deleted unused `PageHeader` component.
