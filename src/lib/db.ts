@@ -200,6 +200,14 @@ export async function insertEngageItems(
 ): Promise<string[]> {
   const ids: string[] = [];
   for (const item of items) {
+    // Dedup: skip if same tweet_url already exists for this date, or same author+date if no URL
+    if (item.tweet_url) {
+      const existing = await sql()`SELECT id FROM engage_items WHERE date = ${date} AND tweet_url = ${item.tweet_url} LIMIT 1`;
+      if (existing.length > 0) continue;
+    } else if (item.author) {
+      const existing = await sql()`SELECT id FROM engage_items WHERE date = ${date} AND author = ${item.author} LIMIT 1`;
+      if (existing.length > 0) continue;
+    }
     const rows = await sql()`
       INSERT INTO engage_items (date, type, author, tweet_url, title, context, suggested_angles, priority)
       VALUES (${date}, ${item.type}, ${item.author || null}, ${item.tweet_url || null}, ${item.title}, ${item.context || null}, ${item.suggested_angles || []}, ${item.priority || 0})
