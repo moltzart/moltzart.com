@@ -11,6 +11,9 @@
 - **Pica routing fix:** Updated `workspace-content/AGENTS.md` — Morning X Scan now posts to `/api/ingest/engage` instead of radar. Removed stale endpoints (angles, feedback, research-request). Added explicit rule: no Telegram for scan results, API only.
 - **Cross-project dependency:** Added "Agent Dependency" section to moltzart CLAUDE.md noting which openclaw-home files reference ingest endpoints. Added launchd workspace-sync job on Mac Mini (every 5 min `git pull --ff-only`) so Moltzart sees external edits without burning tokens.
 - **Decision:** System-level cron for workspace sync beats agent-level `git pull` in boot sequence — zero token cost, always current.
+- **Engage priority redesign:** Replaced opaque number badges with grouped priority tiers — "Top Picks" (teal left border), "Worth Engaging", "Also Noted". Grouping communicates priority through position and labels.
+- **Engage dedup:** Added `tweet_url`-based dedup to `insertEngageItems` — Pica's scan posted duplicates across two API calls. Also added "one tweet per topic" quality rule to Pica's instructions to prevent topical overlap.
+- **Pica scan verified end-to-end:** Pica populated 11 reply targets on `/admin/engage` via the new ingest endpoint. Full pipeline working: X scan → `/api/ingest/engage` → engage page with priority tiers.
 
 ## 2026-02-15 (session 5)
 - Admin UI/UX cleanup: unified card pattern across all pages — bordered container + header row with icon/title/count. Removed `max-w-4xl` constraints, all pages now full width. Deleted unused `PageHeader` component.
