@@ -1,5 +1,11 @@
 # Project Log
 
+## 2026-02-16 (session 7)
+- **Newsletter link fix:** Pica was sending root domain URLs (e.g. `https://theverge.com`) as article links instead of full article URLs. Added validation to `/api/ingest/newsletter` that rejects bare domain links. Updated openclaw-home AGENTS.md with explicit instruction. Nulled 11 bad links in DB.
+- **Newsletter upsert:** Added `UNIQUE (digest_date, title)` constraint and `ON CONFLICT DO UPDATE` so Pica can re-process newsletter emails without creating duplicates. Existing fields preserved via COALESCE.
+- **Newsletter view:** Articles without links now render as non-clickable (no ExternalLink icon) instead of linking to `null`.
+- **Next:** Pica re-processing all newsletter emails with correct article URLs. Verify data after she completes.
+
 ## 2026-02-16 (session 6)
 - **Admin page taxonomy cleanup:** Removed Drafts and Research features entirely — deleted pages, API routes, components, DB functions, and dropped 3 Neon tables (`drafts`, `research_requests`, `research_docs`).
 - **Engage page simplified:** Removed HN highlight type from engage system. Engage is now reply-targets-only (X engagement briefing for @mattdowney). Stripped type filter toggle and HN section from `engage-view.tsx`.
