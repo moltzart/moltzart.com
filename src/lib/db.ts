@@ -83,6 +83,11 @@ export async function insertNewsletterArticles(
     const rows = await sql()`
       INSERT INTO newsletter_articles (digest_date, title, source, link, category, description)
       VALUES (${digestDate}, ${a.title}, ${a.source || null}, ${a.link || null}, ${a.category || null}, ${a.description || null})
+      ON CONFLICT (digest_date, title) DO UPDATE SET
+        link = COALESCE(EXCLUDED.link, newsletter_articles.link),
+        source = COALESCE(EXCLUDED.source, newsletter_articles.source),
+        category = COALESCE(EXCLUDED.category, newsletter_articles.category),
+        description = COALESCE(EXCLUDED.description, newsletter_articles.description)
       RETURNING id
     `;
     ids.push(rows[0].id);
