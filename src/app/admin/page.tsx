@@ -1,19 +1,16 @@
 import Link from "next/link";
 import {
   AlertCircle,
-  ArrowRight,
   ArrowUpRight,
   CircleCheck,
-  FileText,
 } from "lucide-react";
 import {
   fetchTasksDb,
-  fetchDraftsDb,
-  fetchResearchDocs,
   fetchRadarDatesDb,
   fetchRadarItemsByDate,
-  fetchOpenResearchRequests,
-  type DbDraft,
+  fetchEngageItemsByDate,
+  fetchEngageDates,
+  fetchNewsletterArticlesDb,
 } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { StatusDot } from "@/components/admin/status-dot";
@@ -24,47 +21,40 @@ import { RadarHighlights } from "@/components/dashboard/radar-highlights";
 export const dynamic = "force-dynamic";
 
 type ActionItem = {
-  type: "urgent" | "pending-draft" | "research-request";
+  type: "urgent";
   label: string;
   source: string;
   sourceHref: string;
   dotVariant: "urgent" | "active" | "complete";
 };
 
-function readTime(wordCount: number): string {
-  const mins = Math.max(1, Math.round(wordCount / 200));
-  return `${mins} min`;
-}
-
-function formatRelativeDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
-  const docDate = new Date(d.toLocaleString("en-US", { timeZone: "America/New_York" }));
-  today.setHours(0, 0, 0, 0);
-  docDate.setHours(0, 0, 0, 0);
-  const diffDays = Math.floor((today.getTime() - docDate.getTime()) / 86400000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
 export default async function AdminDashboard() {
-  const [tasks, draftsRows, radarDates, researchRequests, researchDocs] =
+  const [tasks, radarDates, engageDates, newsletterArticles] =
     await Promise.all([
       fetchTasksDb(),
-      fetchDraftsDb(),
       fetchRadarDatesDb(),
-      fetchOpenResearchRequests(),
-      fetchResearchDocs(),
+      fetchEngageDates(),
+      fetchNewsletterArticlesDb(),
     ]);
 
   // Sequential: fetch latest radar day
-  const latestDate = radarDates[0] || null;
-  const latestRadar = latestDate
-    ? { items: await fetchRadarItemsByDate(latestDate) }
+  const latestRadarDate = radarDates[0] || null;
+  const latestRadar = latestRadarDate
+    ? { items: await fetchRadarItemsByDate(latestRadarDate) }
     : null;
+
+  // Engage: count today's reply targets
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const latestEngageDate = engageDates[0] || null;
+  const engageItems = latestEngageDate === today
+    ? await fetchEngageItemsByDate(today)
+    : [];
+
+  // Newsletter: count latest digest articles
+  const latestDigestDate = newsletterArticles.length > 0 ? newsletterArticles[0].digest_date.slice(0, 10) : null;
+  const latestDigestCount = latestDigestDate
+    ? newsletterArticles.filter((a) => a.digest_date.slice(0, 10) === latestDigestDate).length
+    : 0;
 
   // Task stats
   const taskStats = { urgent: 0, active: 0, blocked: 0, completed: 0, total: tasks.length };
@@ -75,16 +65,8 @@ export default async function AdminDashboard() {
     if (t.blocked_by) taskStats.blocked++;
   }
 
-  // Draft stats
-  const draftStats = {
-    pending: draftsRows.filter((d: DbDraft) => d.status === "pending").length,
-    approved: draftsRows.filter((d: DbDraft) => d.status === "approved").length,
-    posted: draftsRows.filter((d: DbDraft) => d.status === "posted").length,
-  };
-
-  // Action queue
+  // Action queue — urgent tasks only
   const actions: ActionItem[] = [];
-
   const urgentTasks = tasks.filter((t) => t.priority === "urgent" && t.status !== "done");
   for (const task of urgentTasks) {
     actions.push({
@@ -96,33 +78,11 @@ export default async function AdminDashboard() {
     });
   }
 
-  const pendingDrafts = draftsRows.filter((d: DbDraft) => d.status === "pending");
-  for (const draft of pendingDrafts as DbDraft[]) {
-    actions.push({
-      type: "pending-draft",
-      label: draft.content.slice(0, 120) + (draft.content.length > 120 ? "..." : ""),
-      source: "Content Ideas",
-      sourceHref: "/admin/drafts",
-      dotVariant: "active",
-    });
-  }
-
-  for (const req of researchRequests) {
-    actions.push({
-      type: "research-request",
-      label: req.title,
-      source: "Research Request",
-      sourceHref: "/admin/research",
-      dotVariant: "active",
-    });
-  }
-
   const taskProgress = taskStats.total > 0
     ? Math.round((taskStats.completed / taskStats.total) * 100)
     : 0;
 
   const radarItemCount = latestRadar?.items.length || 0;
-  const recentResearch = researchDocs.slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -148,23 +108,22 @@ export default async function AdminDashboard() {
         <StatCard
           title="Radar"
           value={radarItemCount}
-          subtitle={latestDate ? `Scanned ${latestDate}` : "No scans yet"}
+          subtitle={latestRadarDate ? `Scanned ${latestRadarDate}` : "No scans yet"}
           href="/admin/radar"
-        >
-        </StatCard>
-
-        <StatCard
-          title="Content Ideas"
-          value={draftStats.pending}
-          subtitle={`${draftStats.approved} approved · ${draftStats.posted} posted`}
-          href="/admin/drafts"
         />
 
         <StatCard
-          title="Research"
-          value={researchDocs.length}
-          subtitle={researchRequests.length > 0 ? `${researchRequests.length} open request${researchRequests.length !== 1 ? "s" : ""}` : "No open requests"}
-          href="/admin/research"
+          title="Engage"
+          value={engageItems.length}
+          subtitle={engageItems.length > 0 ? `${engageItems.length} reply targets today` : "No targets today"}
+          href="/admin/engage"
+        />
+
+        <StatCard
+          title="Newsletter"
+          value={latestDigestCount}
+          subtitle={latestDigestDate ? `Latest: ${latestDigestDate}` : "No digests yet"}
+          href="/admin/newsletter"
         />
       </div>
 
@@ -217,57 +176,9 @@ export default async function AdminDashboard() {
 
       {/* Row 3: Radar highlights */}
       <RadarHighlights
-        date={latestDate || "—"}
+        date={latestRadarDate || "—"}
         items={latestRadar?.items || []}
       />
-
-      {/* Row 4: Recent Research (condensed) */}
-      {recentResearch.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-              Recent Research
-            </h2>
-            <Link
-              href="/admin/research"
-              className="text-xs text-zinc-500 hover:text-teal-400 transition-colors"
-            >
-              View all
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {recentResearch.map((doc) => (
-              <Link
-                key={doc.slug}
-                href={`/admin/research/${doc.slug}`}
-                className="flex items-start gap-3 px-4 py-3 border border-zinc-800/50 rounded-lg bg-zinc-900/30 hover:bg-zinc-800/40 transition-colors group"
-              >
-                <FileText size={14} className="text-zinc-600 shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-zinc-200 line-clamp-1">{doc.title}</span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {doc.word_count && (
-                      <span className="text-[10px] font-mono text-zinc-600">
-                        {readTime(doc.word_count)}
-                      </span>
-                    )}
-                    {doc.created_at && (
-                      <span className="text-[10px] text-zinc-600">
-                        {formatRelativeDate(doc.created_at)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <ArrowRight
-                  size={12}
-                  className="text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0 mt-1"
-                />
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
-

@@ -1,5 +1,14 @@
 # Project Log
 
+## 2026-02-16 (session 6)
+- **Admin page taxonomy cleanup:** Removed Drafts and Research features entirely — deleted pages, API routes, components, DB functions, and dropped 3 Neon tables (`drafts`, `research_requests`, `research_docs`).
+- **Engage page simplified:** Removed HN highlight type from engage system. Engage is now reply-targets-only (X engagement briefing for @mattdowney). Stripped type filter toggle and HN section from `engage-view.tsx`.
+- **Radar data cleanup:** Deleted misplaced `Newsletters` and `X Timeline` rows from `radar_items` — those content types now route to their proper pages.
+- **Dashboard updated:** Replaced Content Ideas and Research stat cards with Engage and Newsletter. Action queue now shows urgent tasks only (no more draft/research items). Removed Recent Research grid.
+- **Sidebar restructured:** Dashboard, Inputs (Radar, Engage, Newsletter), Operations (Tasks). Removed Outputs group entirely.
+- **openclaw-home updated:** Added engage endpoint to AGENTS.md Data Layer section, removed draft/research endpoints, added routing rules. Updated Pica delegation in STANDING-ORDERS.md with 3 output streams. Paused X Draft Review (Moltzart no longer tweets).
+- **Decision:** Newsletter moved from Outputs to Inputs — it's curated content Pica finds for Matt to pick from, not Matt's output.
+
 ## 2026-02-15 (session 5)
 - Admin UI/UX cleanup: unified card pattern across all pages — bordered container + header row with icon/title/count. Removed `max-w-4xl` constraints, all pages now full width. Deleted unused `PageHeader` component.
 - **Decision:** Grouped sidebar nav by workflow stage: Inputs (Radar, Research), Outputs (Content Ideas, Newsletter), Operations (Tasks).

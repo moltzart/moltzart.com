@@ -90,101 +90,6 @@ export async function insertNewsletterArticles(
   return ids;
 }
 
-// --- Research Requests ---
-
-export interface DbResearchRequest {
-  id: string;
-  title: string;
-  requested_by: string;
-  priority: string;
-  details: string | null;
-  status: string;
-  created_at: string;
-}
-
-export async function fetchOpenResearchRequests(): Promise<DbResearchRequest[]> {
-  return await sql()`
-    SELECT * FROM research_requests
-    WHERE status IS NULL OR status != 'completed'
-    ORDER BY
-      CASE WHEN priority = 'high' THEN 0
-           WHEN priority = 'normal' THEN 1
-           ELSE 2 END,
-      created_at DESC
-  ` as unknown as DbResearchRequest[];
-}
-
-export async function insertResearchRequest(
-  title: string,
-  requestedBy: string,
-  priority?: string,
-  details?: string
-): Promise<string> {
-  const rows = await sql()`
-    INSERT INTO research_requests (title, requested_by, priority, details)
-    VALUES (${title}, ${requestedBy}, ${priority || 'normal'}, ${details || null})
-    RETURNING id
-  `;
-  return rows[0].id;
-}
-
-// --- Drafts ---
-
-export interface DbDraft {
-  id: string;
-  date: string;
-  time: string | null;
-  type: string;
-  content: string;
-  status: string;
-  reply_to: string | null;
-  reply_context: string | null;
-  feedback: string | null;
-  tweet_id: string | null;
-  priority: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export async function fetchDraftsDb(): Promise<DbDraft[]> {
-  const rows = await sql()`SELECT * FROM drafts ORDER BY date DESC, created_at DESC`;
-  return rows.map((r) => ({ ...r, date: toDateStr(r.date) })) as unknown as DbDraft[];
-}
-
-export async function insertDraft(
-  date: string,
-  type: string,
-  content: string,
-  opts?: { time?: string; reply_to?: string; reply_context?: string; priority?: string }
-): Promise<string> {
-  const rows = await sql()`
-    INSERT INTO drafts (date, time, type, content, reply_to, reply_context, priority)
-    VALUES (${date}, ${opts?.time || null}, ${type}, ${content}, ${opts?.reply_to || null}, ${opts?.reply_context || null}, ${opts?.priority || 'normal'})
-    RETURNING id
-  `;
-  return rows[0].id;
-}
-
-export async function fetchDraftById(id: string): Promise<DbDraft | null> {
-  const rows = await sql()`SELECT * FROM drafts WHERE id = ${id}`;
-  if (rows.length === 0) return null;
-  const r = rows[0];
-  return { ...r, date: toDateStr(r.date) } as unknown as DbDraft;
-}
-
-export async function updateDraftStatus(
-  id: string,
-  status: string,
-  feedback?: string
-): Promise<boolean> {
-  const rows = await sql()`
-    UPDATE drafts SET status = ${status}, feedback = ${feedback || null}, updated_at = now()
-    WHERE id = ${id}
-    RETURNING id
-  `;
-  return rows.length > 0;
-}
-
 // --- Tasks ---
 
 export interface DbTask {
@@ -263,63 +168,46 @@ export async function updateTask(
   return rows.length > 0;
 }
 
-// --- Research Docs ---
+// --- Engage Items ---
 
-export interface DbResearchDoc {
+export interface DbEngageItem {
   id: string;
-  slug: string;
+  date: string;
+  type: string;
+  author: string | null;
+  tweet_url: string | null;
   title: string;
-  content: string;
-  excerpt: string | null;
-  word_count: number | null;
-  status: string;
-  tags: string[];
-  research_request_id: string | null;
+  context: string | null;
+  suggested_angles: string[];
+  points: number | null;
+  priority: number;
   created_at: string;
-  updated_at: string;
 }
 
-export async function fetchResearchDocs(): Promise<Omit<DbResearchDoc, 'content'>[]> {
-  const rows = await sql()`
-    SELECT id, slug, title, excerpt, word_count, status, tags, research_request_id, created_at, updated_at
-    FROM research_docs
-    ORDER BY created_at DESC
-  `;
-  return rows as unknown as Omit<DbResearchDoc, 'content'>[];
+export async function fetchEngageDates(): Promise<string[]> {
+  const rows = await sql()`SELECT DISTINCT date FROM engage_items ORDER BY date DESC`;
+  return rows.map((r) => toDateStr(r.date));
 }
 
-export async function fetchResearchDocBySlug(slug: string): Promise<DbResearchDoc | null> {
-  const rows = await sql()`SELECT * FROM research_docs WHERE slug = ${slug}`;
-  if (rows.length === 0) return null;
-  return rows[0] as unknown as DbResearchDoc;
+export async function fetchEngageItemsByDate(date: string): Promise<DbEngageItem[]> {
+  const rows = await sql()`SELECT * FROM engage_items WHERE date = ${date} ORDER BY priority`;
+  return rows.map((r) => ({ ...r, date: toDateStr(r.date) })) as unknown as DbEngageItem[];
 }
 
-export async function insertResearchDoc(
-  slug: string,
-  title: string,
-  content: string,
-  opts?: { status?: string; tags?: string[]; research_request_id?: string }
-): Promise<string> {
-  const plainText = content
-    .split("\n")
-    .filter((l) => !l.startsWith("#") && !l.startsWith("---") && l.trim().length > 0)
-    .join(" ")
-    .replace(/[*_`\[\]]/g, "");
-  let excerpt = plainText.slice(0, 150).trim();
-  if (plainText.length > 150) excerpt += "...";
-  const wordCount = content.split(/\s+/).filter(Boolean).length;
-
-  const rows = await sql()`
-    INSERT INTO research_docs (slug, title, content, excerpt, word_count, status, tags, research_request_id)
-    VALUES (${slug}, ${title}, ${content}, ${excerpt}, ${wordCount}, ${opts?.status || 'published'}, ${opts?.tags || []}, ${opts?.research_request_id || null})
-    RETURNING id
-  `;
-  return rows[0].id;
-}
-
-export async function deleteResearchDocBySlug(slug: string): Promise<boolean> {
-  const rows = await sql()`DELETE FROM research_docs WHERE slug = ${slug} RETURNING id`;
-  return rows.length > 0;
+export async function insertEngageItems(
+  date: string,
+  items: { type: string; author?: string; tweet_url?: string; title: string; context?: string; suggested_angles?: string[]; priority?: number }[]
+): Promise<string[]> {
+  const ids: string[] = [];
+  for (const item of items) {
+    const rows = await sql()`
+      INSERT INTO engage_items (date, type, author, tweet_url, title, context, suggested_angles, priority)
+      VALUES (${date}, ${item.type}, ${item.author || null}, ${item.tweet_url || null}, ${item.title}, ${item.context || null}, ${item.suggested_angles || []}, ${item.priority || 0})
+      RETURNING id
+    `;
+    ids.push(rows[0].id);
+  }
+  return ids;
 }
 
 // --- Newsletter Digests (grouped view) ---
@@ -362,66 +250,6 @@ export async function fetchNewsletterDigests(): Promise<NewsletterDigest[]> {
   }
 
   return digests;
-}
-
-// --- Drafts (grouped view) ---
-
-export type DraftStatus = "pending" | "approved" | "posted" | "rejected";
-
-export interface Draft {
-  id: string;
-  date: string;
-  time?: string;
-  type: "original" | "reply";
-  replyTo?: string;
-  replyContext?: string;
-  content: string;
-  status: DraftStatus;
-  feedback?: string;
-  tweetId?: string;
-  priority?: "high" | "normal" | "low";
-}
-
-export interface DraftDay {
-  date: string;
-  label: string;
-  drafts: Draft[];
-}
-
-export interface DraftsData {
-  days: DraftDay[];
-}
-
-export async function fetchDrafts(): Promise<DraftsData> {
-  const rows = await fetchDraftsDb();
-  const drafts: Draft[] = rows.map((r) => ({
-    id: r.id,
-    date: r.date.slice(0, 10),
-    time: r.time || undefined,
-    type: r.type as "original" | "reply",
-    replyTo: r.reply_to || undefined,
-    replyContext: r.reply_context || undefined,
-    content: r.content,
-    status: r.status as DraftStatus,
-    feedback: r.feedback || undefined,
-    tweetId: r.tweet_id || undefined,
-    priority: (r.priority as "high" | "normal" | "low") || undefined,
-  }));
-
-  const map = new Map<string, Draft[]>();
-  for (const d of drafts) {
-    if (!map.has(d.date)) map.set(d.date, []);
-    map.get(d.date)!.push(d);
-  }
-  const days = Array.from(map.entries())
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([date, dayDrafts]) => ({
-      date,
-      label: formatDayLabel(date),
-      drafts: dayDrafts,
-    }));
-
-  return { days };
 }
 
 // --- Radar (grouped view) ---

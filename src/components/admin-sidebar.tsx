@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { CheckSquare, FileText, LayoutDashboard, LogOut, Newspaper, PenLine, Radar } from "lucide-react";
+import { CheckSquare, LayoutDashboard, LogOut, MessageCircle, Newspaper, Radar } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -27,13 +27,7 @@ const navGroups = [
     label: "Inputs",
     items: [
       { title: "Radar", href: "/admin/radar", icon: Radar },
-      { title: "Research", href: "/admin/research", icon: FileText },
-    ],
-  },
-  {
-    label: "Outputs",
-    items: [
-      { title: "Content Ideas", href: "/admin/drafts", icon: PenLine },
+      { title: "Engage", href: "/admin/engage", icon: MessageCircle },
       { title: "Newsletter", href: "/admin/newsletter", icon: Newspaper },
     ],
   },
