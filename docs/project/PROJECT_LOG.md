@@ -1,5 +1,17 @@
 # Project Log
 
+## 2026-02-19 (session 12)
+
+- Built full X Drafts pipeline: `x_drafts` table, `POST/GET /api/ingest/draft`, `PATCH /api/ingest/draft/:id`, `DELETE /api/admin/draft/:id`, `/admin/drafts/[week]` page with weekly view pattern, Drafts added to sidebar under Operations.
+- Fixed tag layout violations in `radar-week-view.tsx` and `newsletter-view.tsx` — `LaneTag`/`PillarTag` were inline with title in `flex items-center` row. Now block layout: tag on own line, title below with `mt-1`.
+- Removed lane filter strip from radar week view.
+- Fixed task sort order: `in_progress → open → done` (was priority-only).
+- Added `PATCH /api/ingest/task/:id` for partial task updates. Fixed critical bug in `updateTask`: was writing `null` for every unprovided field, causing 500s on partial PATCHes due to `title NOT NULL` constraint. Fixed with `COALESCE`.
+- **Decision:** Drafts page follows the same weekly view pattern as radar/engage/newsletter — redirect to current week Monday, `[week]` dynamic route, `WeekSelector`, collapsible days. No one-off patterns.
+- **Learned:** `updateTask` had always been broken for partial updates — it set every unspecified field to `null` unconditionally. The bug was invisible until Moltzart tried to PATCH only `{status: "done"}`. Any DB update function that accepts partial fields needs `COALESCE` or equivalent, not conditional ternaries that collapse to null.
+- **Watch:** The same COALESCE pattern is needed anywhere a partial-update function exists. Check `updateXDraft` — it already uses COALESCE correctly. Tasks is now fixed. If new update functions are added, don't copy the old `updateTask` pattern.
+- **Next:** Moltzart wiring up automatic task-closing via PATCH. Verify tasks appear as `done` in `/admin/tasks` after his next run. Also verify Pica's next newsletter scan sends correct pillar strings.
+
 ## 2026-02-19 (session 11)
 
 - Consolidated lane/source tags into `src/components/admin/tag-badge.tsx` — single source of truth for `LaneTag`, `SourceTag`, `PillarTag`. Replaced shadcn `Badge` (plain gray) in radar dashboard card with colored `LaneTag`.
