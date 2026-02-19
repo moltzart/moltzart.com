@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { RadarWeekDay, RadarItem } from "@/lib/db";
 import { ChevronDown, ChevronRight, ExternalLink, Radar as RadarIcon, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -12,34 +12,7 @@ export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
   const [openDates, setOpenDates] = useState<Set<string>>(
     () => new Set(initialDays.length > 0 ? [initialDays[0].date] : [])
   );
-  const [activeLanes, setActiveLanes] = useState<string[]>([]);
-
-  // Collect all unique lanes across the whole week
-  const allLanes = useMemo(() => {
-    const lanes = new Set<string>();
-    for (const day of days) {
-      for (const section of day.sections) {
-        for (const item of section.items) {
-          lanes.add(item.lane);
-        }
-      }
-    }
-    return Array.from(lanes).sort();
-  }, [days]);
-
-  // Apply lane filter: returns filtered sections, filtering out empty ones
-  function filterSections(sections: RadarWeekDay["sections"]) {
-    if (activeLanes.length === 0) return sections;
-    return sections
-      .map((s) => ({ ...s, items: s.items.filter((i) => activeLanes.includes(i.lane)) }))
-      .filter((s) => s.items.length > 0);
-  }
-
-  // Visible days after filtering (hide days with zero items)
-  const visibleDays = useMemo(() => {
-    return days.map((d) => ({ ...d, sections: filterSections(d.sections) })).filter((d) => d.sections.length > 0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days, activeLanes]);
+  const visibleDays = days;
 
   if (days.length === 0) {
     return <EmptyState icon={RadarIcon} message="No radar items this week." />;
@@ -52,12 +25,6 @@ export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
       else next.add(date);
       return next;
     });
-  }
-
-  function toggleLane(lane: string) {
-    setActiveLanes((prev) =>
-      prev.includes(lane) ? prev.filter((l) => l !== lane) : [...prev, lane]
-    );
   }
 
   async function deleteItem(dayDate: string, itemId: string) {
@@ -80,32 +47,8 @@ export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
 
   return (
     <div className="space-y-3">
-      {/* Lane filter */}
-      {allLanes.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {allLanes.map((lane) => {
-            const isActive = activeLanes.includes(lane);
-            const colors = laneColors[lane]?.tag || "bg-zinc-700/40 text-zinc-400";
-            return (
-              <button
-                key={lane}
-                onClick={() => toggleLane(lane)}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-medium uppercase tracking-wider border transition-colors ${
-                  isActive
-                    ? `${colors} border-current/20`
-                    : "text-zinc-600 border-zinc-800/50 hover:text-zinc-400"
-                }`}
-              >
-                {lane}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Days */}
       {visibleDays.length === 0 ? (
-        <EmptyState icon={RadarIcon} message="No items match the selected lanes." />
+        <EmptyState icon={RadarIcon} message="No radar items this week." />
       ) : (
         visibleDays.map((day) => {
           const isOpen = openDates.has(day.date);
