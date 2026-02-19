@@ -1,5 +1,14 @@
 # Project Log
 
+## 2026-02-19 (session 9)
+- **Newsletter week view:** Replaced flat newsletter page with Mon–Fri week-scoped view. `/admin/newsletter` now redirects to current week slug (e.g. `/admin/newsletter/2026-02-16`). Dynamic `[week]` route validates slug (must be a Monday), fetches only that week's articles from Neon, renders a week-selector dropdown in the header with previous-week navigation.
+- **New files:** `src/lib/newsletter-weeks.ts` (pure date helpers), `src/components/week-selector.tsx` (client nav dropdown), `src/app/admin/newsletter/[week]/page.tsx` (dynamic route).
+- **DB:** Added `fetchNewsletterWeek(start, end)` and `fetchNewsletterWeekStarts()` to `db.ts`. No schema changes.
+- **Decision:** Slug is the raw Monday ISO date (`2026-02-16`) — no encoding, trivial to parse, stable and bookmarkable.
+- **Learned:** `formatWeekLabel` needs to handle month-crossing weeks (e.g. "Feb 28–Mar 3, 2026") — caught by code reviewer before shipping.
+- **Watch:** `WeekSelector` uncontrolled select edge case — if user navigates to a valid Monday with no articles while other weeks have data, the dropdown `value` won't match any option. Visually shows wrong week. Low-risk for solo use but worth cleaning up.
+- **Next:** Verify week view looks correct in browser. Check that Pica's newsletter ingests on Feb 16–19 appear under the Feb 16–20 week.
+
 ## 2026-02-17 (session 8)
 - **Pica engage routing fix:** Pica (Haiku) was sending X engagement briefings to Telegram instead of POSTing to `/api/ingest/engage`. The moltzart endpoint and `/admin/engage` page were already working — problem was entirely in Pica's instructions in openclaw-home.
 - **Root cause:** Morning X Scan procedure was structured as "curate a briefing" with the API call as step 5 of 8 — Haiku defaulted to the Telegram output pattern. A competing remote commit had also reverted X scan routing to `/api/ingest/radar` and re-added dead endpoints (`/angles`, `/feedback`, `/research-request`).
