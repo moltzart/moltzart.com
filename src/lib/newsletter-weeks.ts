@@ -33,6 +33,11 @@ export function formatWeekLabel(monday: string): string {
   const d = new Date(monday + "T12:00:00Z");
   const friday = new Date(monday + "T12:00:00Z");
   friday.setUTCDate(friday.getUTCDate() + 4);
-  const month = d.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
-  return `${month} ${d.getUTCDate()}–${friday.getUTCDate()}, ${d.getUTCFullYear()}`;
+  const monMonth = d.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+  const friMonth = friday.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+  const fridayLabel =
+    friMonth === monMonth
+      ? `${friday.getUTCDate()}`
+      : `${friMonth} ${friday.getUTCDate()}`;
+  return `${monMonth} ${d.getUTCDate()}–${fridayLabel}, ${d.getUTCFullYear()}`;
 }
