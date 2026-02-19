@@ -1,5 +1,19 @@
 # Project Log
 
+## 2026-02-19 (session 11)
+
+- Consolidated lane/source tags into `src/components/admin/tag-badge.tsx` — single source of truth for `LaneTag`, `SourceTag`, `PillarTag`. Replaced shadcn `Badge` (plain gray) in radar dashboard card with colored `LaneTag`.
+- Dashboard card UX pass: increased row padding (`py-2.5` → `py-4`), darkened dividers (`/20` → `/40`), made entire rows internal `<Link>` targets (radar→week, newsletter→week, engage→week). Removed all outbound external links from dashboard cards.
+- Newsletter UI now shows content pillar tag (`PillarTag`) instead of source name. Three fixed pillars: `DESIGN + DEVELOPMENT` (pink), `TECH + INNOVATION` (violet), `WORK + MINDSET` (amber). `category` column and `NewsletterArticle.category` field already existed — just not wired to the display.
+- Pica's freeform categories (`AI`, `Design`, `Tech`, `Business`, etc.) replaced with the three pillars in `workspace-content/AGENTS.md` by Moltzart.
+- Governance: lifted `workspace-content/AGENTS.md` off-limits restriction (set in session 8, now stale). Added ownership table to `CLAUDE.md` here. Moltzart mirrored it in openclaw-home.
+- **Decision:** Tags always stack above title on their own line — never inline/right-aligned. Uppercase on all tag variants enforced in the component.
+- **Decision:** Dashboard cards link internally only. No external links from dashboard — navigate to the internal page first, then to the source if needed. Keeps the dashboard as a nav surface, not a content surface.
+- **Decision:** `AGENTS.md` not created here — only one agent (Claude Code) operates in this repo, so `CLAUDE.md` is sufficient. `AGENTS.md` is for multi-agent repos.
+- **Learned:** `category` was already in the DB schema and `NewsletterArticle` type from day one — Pica was sending it but with wrong values. Always check what's already plumbed before adding columns.
+- **Watch:** Existing newsletter articles in DB have Pica's old freeform categories (`AI`, `Design`, etc.) — these will render with the gray fallback `PillarTag` color until Pica re-processes or a backfill SQL update is run. Not broken, just unstyled.
+- **Next:** Verify Pica's next newsletter scan sends one of the three exact pillar strings. If gray tags still appear after her next run, check what she's actually sending via the DB (`SELECT category, count(*) FROM newsletter_articles GROUP BY category`).
+
 ## 2026-02-19 (session 9)
 - **Newsletter week view:** Replaced flat newsletter page with Mon–Fri week-scoped view. `/admin/newsletter` now redirects to current week slug (e.g. `/admin/newsletter/2026-02-16`). Dynamic `[week]` route validates slug (must be a Monday), fetches only that week's articles from Neon, renders a week-selector dropdown in the header with previous-week navigation.
 - **New files:** `src/lib/newsletter-weeks.ts` (pure date helpers), `src/components/week-selector.tsx` (client nav dropdown), `src/app/admin/newsletter/[week]/page.tsx` (dynamic route).
