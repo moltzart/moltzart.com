@@ -256,6 +256,31 @@ const Chevron = collapsed ? ChevronRight : ChevronDown
 </div>
 ```
 
+### Tag Badges
+
+Categorical tags for radar lanes and newsletter sources. Use the shared component at `src/components/admin/tag-badge.tsx` — do **not** create inline badge components.
+
+```tsx
+import { LaneTag, SourceTag } from "@/components/admin/tag-badge";
+
+// Radar lane — colored pill, uppercase
+<LaneTag lane={item.lane} />
+
+// Newsletter source — colored pill, proper case
+<SourceTag source={article.source} />
+```
+
+Both variants share the same base style:
+```
+inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium shrink-0
+```
+
+Color maps (`laneColors`, `sourceColors`) are also exported for cases that need the raw color value (e.g., filter button active states). Fallback is `bg-zinc-700/40 text-zinc-400` for unknown values.
+
+**Placement**: In compact list rows (dashboard and full-page), tags are right-aligned on the same row as the title, with the title taking `flex-1 min-w-0`.
+
+**Do not use**: `<Badge variant="outline">` or inline `<span>` for lane/source tags. Always use `LaneTag` / `SourceTag`.
+
 ### Status Badge
 ```tsx
 <span className="

@@ -5,27 +5,7 @@ import type { RadarWeekDay, RadarItem } from "@/lib/db";
 import { ChevronDown, ChevronRight, ExternalLink, Radar as RadarIcon, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Panel } from "@/components/admin/panel";
-
-const laneColors: Record<string, { tag: string; bg: string }> = {
-  HN: { tag: "bg-orange-500/20 text-orange-400", bg: "bg-orange-500/5" },
-  Design: { tag: "bg-pink-500/20 text-pink-400", bg: "bg-pink-500/5" },
-  CSS: { tag: "bg-blue-500/20 text-blue-400", bg: "bg-blue-500/5" },
-  "AI/Tech": { tag: "bg-purple-500/20 text-purple-400", bg: "bg-purple-500/5" },
-  UX: { tag: "bg-green-500/20 text-green-400", bg: "bg-green-500/5" },
-  AI: { tag: "bg-violet-500/20 text-violet-400", bg: "bg-violet-500/5" },
-  Tech: { tag: "bg-cyan-500/20 text-cyan-400", bg: "bg-cyan-500/5" },
-  Reddit: { tag: "bg-red-500/20 text-red-400", bg: "bg-red-500/5" },
-  X: { tag: "bg-sky-500/20 text-sky-400", bg: "bg-sky-500/5" },
-};
-
-function LaneTag({ lane }: { lane: string }) {
-  const colors = laneColors[lane]?.tag || "bg-zinc-700/40 text-zinc-400";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${colors}`}>
-      {lane}
-    </span>
-  );
-}
+import { LaneTag, laneColors } from "@/components/admin/tag-badge";
 
 export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
   const [days, setDays] = useState(initialDays);

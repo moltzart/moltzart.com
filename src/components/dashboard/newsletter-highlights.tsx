@@ -2,29 +2,8 @@ import Link from "next/link";
 import { ArrowUpRight, Newspaper } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Panel } from "@/components/admin/panel";
+import { SourceTag } from "@/components/admin/tag-badge";
 import type { NewsletterArticle } from "@/lib/db";
-
-const sourceColors: Record<string, string> = {
-  "The Verge": "bg-violet-500/20 text-violet-400",
-  "TechCrunch": "bg-emerald-500/20 text-emerald-400",
-  "Ars Technica": "bg-blue-500/20 text-blue-400",
-  "Wired": "bg-red-500/20 text-red-400",
-  "MIT Technology Review": "bg-cyan-500/20 text-cyan-400",
-  "Bloomberg": "bg-violet-500/20 text-violet-400",
-  "Reuters": "bg-sky-500/20 text-sky-400",
-  "NYT": "bg-zinc-400/20 text-zinc-300",
-  "Platformer": "bg-pink-500/20 text-pink-400",
-  "Stratechery": "bg-amber-500/20 text-amber-400",
-};
-
-function SourceBadge({ source }: { source: string }) {
-  const colors = sourceColors[source] || "bg-zinc-700/30 text-zinc-400";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${colors}`}>
-      {source}
-    </span>
-  );
-}
 
 interface NewsletterHighlightsProps {
   articles: NewsletterArticle[];
@@ -63,8 +42,10 @@ export function NewsletterHighlights({ articles, date }: NewsletterHighlightsPro
             return (
               <div key={article.id} className="px-4 py-2.5 hover:bg-zinc-800/40 transition-colors">
                 <Wrapper {...linkProps} className="block">
-                  {article.source && <SourceBadge source={article.source} />}
-                  <p className="text-sm text-zinc-200 truncate mt-0.5">{article.title}</p>
+                  <div className="flex items-start gap-3">
+                    <p className="flex-1 min-w-0 text-sm text-zinc-200 truncate">{article.title}</p>
+                    {article.source && <SourceTag source={article.source} />}
+                  </div>
                   {article.description && (
                     <p className="text-xs text-zinc-500 truncate">{article.description}</p>
                   )}

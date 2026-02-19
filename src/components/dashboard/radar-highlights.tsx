@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ArrowUpRight, ExternalLink } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Radar } from "lucide-react";
 import type { DbRadarItem } from "@/lib/db";
 import { Panel } from "@/components/admin/panel";
+import { LaneTag } from "@/components/admin/tag-badge";
 
 interface RadarHighlightsProps {
   date: string;
@@ -67,12 +67,7 @@ export function RadarHighlights({ date, items, today }: RadarHighlightsProps) {
                     <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{item.why_bullets[0]}</p>
                   )}
                 </div>
-                <Badge
-                  variant="outline"
-                  className="border-zinc-700/50 text-zinc-500 bg-zinc-800/20 text-[10px] shrink-0"
-                >
-                  {item.lane}
-                </Badge>
+                <LaneTag lane={item.lane} />
               </div>
             ))}
           </div>

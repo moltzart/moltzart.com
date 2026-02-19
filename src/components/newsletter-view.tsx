@@ -5,29 +5,7 @@ import type { NewsletterDigest } from "@/lib/db";
 import { ChevronDown, ChevronRight, ExternalLink, Newspaper, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Panel } from "@/components/admin/panel";
-
-const sourceColors: Record<string, string> = {
-  "The Verge": "bg-purple-500/20 text-purple-400",
-  "Hacker News": "bg-orange-500/20 text-orange-400",
-  "TechCrunch": "bg-green-500/20 text-green-400",
-  "Ars Technica": "bg-blue-500/20 text-blue-400",
-  "Wired": "bg-red-500/20 text-red-400",
-  "MIT Technology Review": "bg-cyan-500/20 text-cyan-400",
-  "Bloomberg": "bg-violet-500/20 text-violet-400",
-  "Reuters": "bg-sky-500/20 text-sky-400",
-  "NYT": "bg-zinc-400/20 text-zinc-300",
-  "Platformer": "bg-pink-500/20 text-pink-400",
-  "Stratechery": "bg-amber-500/20 text-amber-400",
-};
-
-function SourceBadge({ source }: { source: string }) {
-  const colors = sourceColors[source] || "bg-zinc-700/30 text-zinc-400";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${colors}`}>
-      {source}
-    </span>
-  );
-}
+import { SourceTag } from "@/components/admin/tag-badge";
 
 export function NewsletterView({ digests: initialDigests }: { digests: NewsletterDigest[] }) {
   const [digests, setDigests] = useState(initialDigests);
@@ -93,7 +71,7 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
                     <div key={article.id} className="flex items-start gap-2 px-4 py-3 hover:bg-zinc-800/40 transition-colors group">
                       <Wrapper {...linkProps} className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <SourceBadge source={article.source} />
+                          <SourceTag source={article.source} />
                           <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors truncate">
                             {article.title}
                           </p>
