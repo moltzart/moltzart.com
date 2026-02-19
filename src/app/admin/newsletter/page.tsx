@@ -1,9 +1,6 @@
-import { fetchNewsletterDigests } from "@/lib/db";
-import { NewsletterView } from "@/components/newsletter-view";
+import { redirect } from "next/navigation";
+import { getCurrentWeekMonday } from "@/lib/newsletter-weeks";
 
-export const dynamic = "force-dynamic";
-
-export default async function AdminNewsletter() {
-  const digests = await fetchNewsletterDigests();
-  return <NewsletterView digests={digests} />;
+export default function AdminNewsletter() {
+  redirect(`/admin/newsletter/${getCurrentWeekMonday()}`);
 }
