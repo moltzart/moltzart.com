@@ -165,13 +165,13 @@ export async function updateTask(
   // we update all fields using coalesce
   const rows = await sql()`
     UPDATE tasks SET
-      title = ${fields.title !== undefined ? fields.title : null}::text,
-      detail = ${fields.detail !== undefined ? fields.detail : null}::text,
-      status = ${fields.status !== undefined ? fields.status : null}::text,
-      priority = ${fields.priority !== undefined ? fields.priority : null}::text,
-      effort = ${fields.effort !== undefined ? fields.effort : null}::text,
-      due_date = ${fields.due_date !== undefined ? fields.due_date : null}::date,
-      blocked_by = ${fields.blocked_by !== undefined ? fields.blocked_by : null}::text,
+      title = COALESCE(${fields.title ?? null}::text, title),
+      detail = COALESCE(${fields.detail ?? null}::text, detail),
+      status = COALESCE(${fields.status ?? null}::text, status),
+      priority = COALESCE(${fields.priority ?? null}::text, priority),
+      effort = COALESCE(${fields.effort ?? null}::text, effort),
+      due_date = COALESCE(${fields.due_date ?? null}::date, due_date),
+      blocked_by = COALESCE(${fields.blocked_by ?? null}::text, blocked_by),
       updated_at = now()
     WHERE id = ${id}
     RETURNING id
