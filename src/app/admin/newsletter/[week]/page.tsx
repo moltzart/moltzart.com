@@ -5,6 +5,7 @@ import { getWeekBounds, formatWeekLabel } from "@/lib/newsletter-weeks";
 import { NewsletterView } from "@/components/newsletter-view";
 import { WeekSelector } from "@/components/week-selector";
 import { Newspaper } from "lucide-react";
+import { Panel } from "@/components/admin/panel";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function NewsletterWeekPage({ params }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30">
+      <Panel>
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <Newspaper size={14} className="text-teal-500" />
@@ -43,7 +44,7 @@ export default async function NewsletterWeekPage({ params }: Props) {
           </div>
           <span className="text-xs text-zinc-600 font-mono">{totalArticles} articles</span>
         </div>
-      </div>
+      </Panel>
       <NewsletterView digests={digests} />
     </div>
   );

@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import { Panel } from "@/components/admin/panel";
 
 interface Task {
   text: string;
@@ -117,7 +118,7 @@ function SectionCard({ section }: { section: Section }) {
   const Chevron = collapsed ? ChevronRight : ChevronDown;
 
   return (
-    <div className="border border-zinc-800/50 rounded-lg bg-zinc-900/30">
+    <Panel>
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/20 transition-colors rounded-lg"
@@ -147,7 +148,7 @@ function SectionCard({ section }: { section: Section }) {
           <p className="text-xs text-zinc-600 pt-2 italic">Nothing here</p>
         </div>
       )}
-    </div>
+    </Panel>
   );
 }
 

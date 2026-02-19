@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { RadarWeekDay, RadarItem } from "@/lib/db";
 import { ChevronDown, ChevronRight, ExternalLink, Radar as RadarIcon, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
+import { Panel } from "@/components/admin/panel";
 
 const laneColors: Record<string, { tag: string; bg: string }> = {
   HN: { tag: "bg-orange-500/20 text-orange-400", bg: "bg-orange-500/5" },
@@ -130,7 +131,7 @@ export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
           const isOpen = openDates.has(day.date);
           const totalItems = day.sections.reduce((sum, s) => sum + s.items.length, 0);
           return (
-            <div key={day.date} className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col">
+            <Panel key={day.date} className="flex flex-col">
               <button
                 onClick={() => toggleDay(day.date)}
                 className="flex items-center justify-between px-4 py-3 w-full text-left hover:bg-zinc-800/20 transition-colors rounded-lg"
@@ -216,7 +217,7 @@ export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
                   ))}
                 </div>
               )}
-            </div>
+            </Panel>
           );
         })
       )}

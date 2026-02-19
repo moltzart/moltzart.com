@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { NewsletterDigest } from "@/lib/db";
 import { ChevronDown, ChevronRight, ExternalLink, Newspaper, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
+import { Panel } from "@/components/admin/panel";
 
 const sourceColors: Record<string, string> = {
   "The Verge": "bg-purple-500/20 text-purple-400",
@@ -65,7 +66,7 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
       {digests.map((digest) => {
         const isOpen = openDates.has(digest.date);
         return (
-          <div key={digest.date} className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col">
+          <Panel key={digest.date} className="flex flex-col">
             <button
               onClick={() => toggleDay(digest.date)}
               className="flex items-center justify-between px-4 py-3 w-full text-left hover:bg-zinc-800/20 transition-colors rounded-lg"
@@ -118,7 +119,7 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
                 })}
               </div>
             )}
-          </div>
+          </Panel>
         );
       })}
     </div>

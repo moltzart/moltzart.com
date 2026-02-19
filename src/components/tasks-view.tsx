@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import { Panel } from "@/components/admin/panel";
 
 const priorityConfig: Record<
   string,
@@ -138,7 +139,7 @@ export function TasksView({ initialData }: { initialData: DbTask[] }) {
 
   return (
     <div>
-      <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col">
+      <Panel className="flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
           <div className="flex items-center gap-2">
@@ -170,7 +171,7 @@ export function TasksView({ initialData }: { initialData: DbTask[] }) {
             {data.map((task) => <TaskRow key={task.id} task={task} />)}
           </div>
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

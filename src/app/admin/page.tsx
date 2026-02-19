@@ -13,6 +13,7 @@ import {
 } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { StatusDot } from "@/components/admin/status-dot";
+import { Panel } from "@/components/admin/panel";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { RadarHighlights } from "@/components/dashboard/radar-highlights";
 
@@ -126,7 +127,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Row 2: Action Queue — only shown when there are urgent items */}
-      {actions.length > 0 && <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col">
+      {actions.length > 0 && <Panel className="flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
           <div className="flex items-center gap-2">
@@ -164,7 +165,7 @@ export default async function AdminDashboard() {
             </Link>
           ))}
         </div>
-      </div>}
+      </Panel>}
 
       {/* Row 3: Radar highlights */}
       <RadarHighlights

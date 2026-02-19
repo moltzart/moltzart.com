@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Radar } from "lucide-react";
 import type { DbRadarItem } from "@/lib/db";
+import { Panel } from "@/components/admin/panel";
 
 interface RadarHighlightsProps {
   date: string;
@@ -12,7 +13,7 @@ interface RadarHighlightsProps {
 
 export function RadarHighlights({ date, items }: RadarHighlightsProps) {
   return (
-    <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col h-full">
+    <Panel className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
         <div className="flex items-center gap-2">
@@ -73,6 +74,6 @@ export function RadarHighlights({ date, items }: RadarHighlightsProps) {
           </div>
         </div>
       )}
-    </div>
+    </Panel>
   );
 }

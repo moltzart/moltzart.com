@@ -14,7 +14,7 @@ export function StatCard({ title, value, subtitle, href, children }: StatCardPro
   return (
     <Link
       href={href}
-      className="group rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 hover:bg-zinc-800/40 transition-colors"
+      className="group rounded-lg border border-zinc-700/50 bg-zinc-800/60 p-4 hover:bg-zinc-800/40 transition-colors"
     >
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">{title}</span>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { EngageDay, DbEngageItem } from "@/lib/db";
 import { ArrowUpRight, ChevronDown, ChevronRight, ExternalLink, MessageCircle, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
+import { Panel } from "@/components/admin/panel";
 
 const PRIORITY_TIERS = [
   { max: 1, label: "Top Picks", accent: true },
@@ -61,7 +62,7 @@ export function EngageView({ days: initialDays }: { days: EngageDay[] }) {
         const isOpen = openDates.has(day.date);
         const tiers = groupByTier(day.items);
         return (
-          <div key={day.date} className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col">
+          <Panel key={day.date} className="flex flex-col">
             <button
               onClick={() => toggleDay(day.date)}
               className="flex items-center justify-between px-4 py-3 w-full text-left hover:bg-zinc-800/20 transition-colors rounded-lg"
@@ -142,7 +143,7 @@ export function EngageView({ days: initialDays }: { days: EngageDay[] }) {
                 ))}
               </div>
             )}
-          </div>
+          </Panel>
         );
       })}
     </div>
