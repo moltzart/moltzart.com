@@ -5,7 +5,7 @@ import type { NewsletterDigest } from "@/lib/db";
 import { ChevronDown, ChevronRight, ExternalLink, Newspaper, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Panel } from "@/components/admin/panel";
-import { SourceTag } from "@/components/admin/tag-badge";
+import { PillarTag } from "@/components/admin/tag-badge";
 
 export function NewsletterView({ digests: initialDigests }: { digests: NewsletterDigest[] }) {
   const [digests, setDigests] = useState(initialDigests);
@@ -71,7 +71,7 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
                     <div key={article.id} className="flex items-start gap-2 px-4 py-3 hover:bg-zinc-800/40 transition-colors group">
                       <Wrapper {...linkProps} className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <SourceTag source={article.source} />
+                          {article.category && <PillarTag pillar={article.category} />}
                           <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors truncate">
                             {article.title}
                           </p>

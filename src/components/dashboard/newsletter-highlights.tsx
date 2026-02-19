@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Newspaper } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Panel } from "@/components/admin/panel";
-import { SourceTag } from "@/components/admin/tag-badge";
+import { PillarTag } from "@/components/admin/tag-badge";
 import { getWeekMonday } from "@/lib/newsletter-weeks";
 import type { NewsletterArticle } from "@/lib/db";
 
@@ -42,7 +42,7 @@ export function NewsletterHighlights({ articles, date }: NewsletterHighlightsPro
               href={weekHref}
               className="block px-4 py-4 hover:bg-zinc-800/40 transition-colors"
             >
-              {article.source && <SourceTag source={article.source} />}
+              {article.category && <PillarTag pillar={article.category} />}
               <p className="text-sm text-zinc-200 truncate mt-1">{article.title}</p>
               {article.description && (
                 <p className="text-xs text-zinc-500 truncate">{article.description}</p>
