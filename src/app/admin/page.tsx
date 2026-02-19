@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowUpRight,
-  CircleCheck,
 } from "lucide-react";
 import {
   fetchTasksDb,
@@ -14,7 +13,6 @@ import {
 } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { StatusDot } from "@/components/admin/status-dot";
-import { EmptyState } from "@/components/admin/empty-state";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { RadarHighlights } from "@/components/dashboard/radar-highlights";
 
@@ -89,9 +87,9 @@ export default async function AdminDashboard() {
       {/* Row 1: Metrics strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
-          title="Urgent"
-          value={taskStats.urgent}
-          subtitle={`${taskStats.active} active · ${taskStats.blocked} blocked`}
+          title="Tasks"
+          value={taskStats.total}
+          subtitle={`${taskStats.active} active · ${taskStats.blocked} blocked${taskStats.urgent > 0 ? ` · ${taskStats.urgent} urgent` : ""}`}
           href="/admin/tasks"
         >
           <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
@@ -127,8 +125,8 @@ export default async function AdminDashboard() {
         />
       </div>
 
-      {/* Row 2: Action Queue */}
-      <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col">
+      {/* Row 2: Action Queue — only shown when there are urgent items */}
+      {actions.length > 0 && <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
           <div className="flex items-center gap-2">
@@ -146,33 +144,27 @@ export default async function AdminDashboard() {
           </Link>
         </div>
 
-        {actions.length > 0 ? (
-          <div className="divide-y divide-zinc-800/20">
-            {actions.map((item, i) => (
-              <Link
-                key={i}
-                href={item.sourceHref}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors"
+        <div className="divide-y divide-zinc-800/20">
+          {actions.map((item, i) => (
+            <Link
+              key={i}
+              href={item.sourceHref}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors"
+            >
+              <StatusDot variant={item.dotVariant} pulse={item.type === "urgent"} />
+              <span className="text-sm text-zinc-200 flex-1 min-w-0 truncate">
+                {item.label}
+              </span>
+              <Badge
+                variant="outline"
+                className="border-zinc-700/50 text-zinc-500 bg-zinc-800/20 text-[10px] shrink-0"
               >
-                <StatusDot variant={item.dotVariant} pulse={item.type === "urgent"} />
-                <span className="text-sm text-zinc-200 flex-1 min-w-0 truncate">
-                  {item.label}
-                </span>
-                <Badge
-                  variant="outline"
-                  className="border-zinc-700/50 text-zinc-500 bg-zinc-800/20 text-[10px] shrink-0"
-                >
-                  {item.source}
-                </Badge>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center py-8">
-            <EmptyState icon={CircleCheck} message="All clear — nothing needs attention" />
-          </div>
-        )}
-      </div>
+                {item.source}
+              </Badge>
+            </Link>
+          ))}
+        </div>
+      </div>}
 
       {/* Row 3: Radar highlights */}
       <RadarHighlights
