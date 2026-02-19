@@ -1,8 +1,8 @@
 "use client";
 
-import type { DbEngageItem } from "@/lib/db";
-import { ExternalLink, MessageCircle, ArrowUpRight } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import type { EngageDay, DbEngageItem } from "@/lib/db";
+import { ArrowUpRight, ChevronDown, ChevronRight, ExternalLink, MessageCircle, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
 
 const PRIORITY_TIERS = [
@@ -14,9 +14,8 @@ const PRIORITY_TIERS = [
 function groupByTier(items: DbEngageItem[]) {
   const tiers: { label: string; accent: boolean; items: DbEngageItem[] }[] = [];
   for (const tier of PRIORITY_TIERS) {
-    const matched = items.filter(
-      (i) => i.priority <= tier.max && !tiers.flatMap((t) => t.items).includes(i)
-    );
+    const already = tiers.flatMap((t) => t.items);
+    const matched = items.filter((i) => i.priority <= tier.max && !already.includes(i));
     if (matched.length > 0) {
       tiers.push({ label: tier.label, accent: tier.accent, items: matched });
     }
@@ -24,142 +23,128 @@ function groupByTier(items: DbEngageItem[]) {
   return tiers;
 }
 
-interface Props {
-  dates: string[];
-  initialItems: DbEngageItem[];
-  initialDate: string;
-}
+export function EngageView({ days: initialDays }: { days: EngageDay[] }) {
+  const [days, setDays] = useState(initialDays);
+  const [openDates, setOpenDates] = useState<Set<string>>(
+    () => new Set(initialDays.length > 0 ? [initialDays[0].date] : [])
+  );
 
-export function EngageView({ dates, initialItems, initialDate }: Props) {
-  const [currentDate, setCurrentDate] = useState(initialDate);
-  const [items, setItems] = useState<DbEngageItem[]>(initialItems);
-  const [loading, setLoading] = useState(false);
-  const visibleDates = dates.slice(0, 7);
+  if (days.length === 0) {
+    return <EmptyState icon={MessageCircle} message="No reply targets this week." />;
+  }
 
-  const tiers = useMemo(() => groupByTier(items), [items]);
+  function toggleDay(date: string) {
+    setOpenDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  }
 
-  async function navigate(date: string) {
-    setCurrentDate(date);
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/engage?date=${date}`);
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.items);
-      } else {
-        setItems([]);
-      }
-    } catch {
-      setItems([]);
-    }
-    setLoading(false);
+  async function deleteItem(dayDate: string, itemId: string) {
+    setDays((prev) =>
+      prev
+        .map((d) =>
+          d.date === dayDate
+            ? { ...d, items: d.items.filter((i) => i.id !== itemId) }
+            : d
+        )
+        .filter((d) => d.items.length > 0)
+    );
+    await fetch(`/api/admin/engage/${itemId}`, { method: "DELETE" });
   }
 
   return (
-    <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
-        <div className="flex items-center gap-2">
-          <MessageCircle size={14} className="text-teal-500" />
-          <span className="text-sm font-medium text-zinc-200">Engage</span>
-          {items.length > 0 && (
-            <span className="text-xs text-zinc-600 font-mono">{items.length} items</span>
-          )}
-        </div>
-
-        {/* Date strip */}
-        <div className="flex gap-1.5 flex-wrap">
-          {visibleDates.map((d) => {
-            const label = d.slice(5);
-            const active = d === currentDate;
-            return (
-              <button
-                key={d}
-                onClick={() => navigate(d)}
-                className={`px-2.5 py-1 rounded-md text-xs font-mono transition-colors ${
-                  active
-                    ? "bg-teal-500/10 text-teal-400 border border-teal-500/30"
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-          {dates.length > 7 && (
-            <select
-              value={currentDate}
-              onChange={(e) => navigate(e.target.value)}
-              className="text-xs font-mono bg-zinc-900 border border-zinc-800 rounded-md px-2 py-1 text-zinc-500"
+    <div className="space-y-2">
+      {days.map((day) => {
+        const isOpen = openDates.has(day.date);
+        const tiers = groupByTier(day.items);
+        return (
+          <div key={day.date} className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 flex flex-col">
+            <button
+              onClick={() => toggleDay(day.date)}
+              className="flex items-center justify-between px-4 py-3 w-full text-left hover:bg-zinc-800/20 transition-colors rounded-lg"
             >
-              {dates.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      </div>
-
-      {loading ? (
-        <p className="text-sm text-zinc-500 py-8 text-center">Loading...</p>
-      ) : items.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center py-8">
-          <EmptyState icon={MessageCircle} message="No reply targets for this date." />
-        </div>
-      ) : (
-        <div>
-          {tiers.map((tier, tIdx) => (
-            <div key={tier.label}>
-              {/* Tier header */}
-              <div className={`px-4 py-2 ${tIdx > 0 ? "border-t border-zinc-800/30" : ""}`}>
-                <span className="text-[10px] text-zinc-600 uppercase tracking-wider font-medium">
-                  {tier.label} · {tier.items.length}
-                </span>
+              <div className="flex items-center gap-2">
+                <MessageCircle size={14} className="text-teal-500" />
+                <span className="text-sm font-medium text-zinc-200">{day.label}</span>
+                <span className="text-xs text-zinc-600 font-mono">{day.items.length} items</span>
               </div>
+              {isOpen
+                ? <ChevronDown size={14} className="text-zinc-600" />
+                : <ChevronRight size={14} className="text-zinc-600" />
+              }
+            </button>
 
-              {/* Tier items */}
-              <div className="divide-y divide-zinc-800/20">
-                {tier.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`px-4 py-3 hover:bg-zinc-800/40 transition-colors group ${
-                      tier.accent ? "border-l-2 border-l-teal-500/40" : ""
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {item.author && (
-                          <span className="text-xs font-medium text-teal-400">{item.author}</span>
-                        )}
-                        {item.tweet_url && (
-                          <a href={item.tweet_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
-                            <ExternalLink size={10} />
-                            <span>tweet</span>
-                          </a>
-                        )}
-                      </div>
-                      <p className="text-sm text-zinc-200 leading-relaxed mb-1">{item.title}</p>
-                      {item.context && (
-                        <p className="text-sm text-zinc-500 leading-relaxed mb-2">{item.context}</p>
-                      )}
-                      {item.suggested_angles && item.suggested_angles.length > 0 && (
-                        <ul className="space-y-0.5">
-                          {item.suggested_angles.map((angle, aIdx) => (
-                            <li key={aIdx} className="flex gap-2 text-sm text-zinc-400">
-                              <ArrowUpRight size={12} className="text-teal-500/50 shrink-0 mt-1" />
-                              <span>{angle}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+            {isOpen && (
+              <div className="border-t border-zinc-800/30">
+                {tiers.map((tier, tIdx) => (
+                  <div key={tier.label}>
+                    <div className={`px-4 py-2 ${tIdx > 0 ? "border-t border-zinc-800/30" : ""}`}>
+                      <span className="text-[10px] text-zinc-600 uppercase tracking-wider font-medium">
+                        {tier.label} · {tier.items.length}
+                      </span>
+                    </div>
+                    <div className="divide-y divide-zinc-800/20">
+                      {tier.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`px-4 py-3 hover:bg-zinc-800/40 transition-colors group ${
+                            tier.accent ? "border-l-2 border-l-teal-500/40" : ""
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                {item.author && (
+                                  <span className="text-xs font-medium text-teal-400">{item.author}</span>
+                                )}
+                                {item.tweet_url && (
+                                  <a
+                                    href={item.tweet_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                                  >
+                                    <ExternalLink size={10} />
+                                    <span>tweet</span>
+                                  </a>
+                                )}
+                              </div>
+                              <p className="text-sm text-zinc-200 leading-relaxed mb-1">{item.title}</p>
+                              {item.context && (
+                                <p className="text-sm text-zinc-500 leading-relaxed mb-2">{item.context}</p>
+                              )}
+                              {item.suggested_angles && item.suggested_angles.length > 0 && (
+                                <ul className="space-y-0.5">
+                                  {item.suggested_angles.map((angle, aIdx) => (
+                                    <li key={aIdx} className="flex gap-2 text-sm text-zinc-400">
+                                      <ArrowUpRight size={12} className="text-teal-500/50 shrink-0 mt-1" />
+                                      <span>{angle}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => deleteItem(day.date, item.id)}
+                              className="text-zinc-700 hover:text-red-400 transition-colors p-0.5 opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
+                              title="Delete item"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

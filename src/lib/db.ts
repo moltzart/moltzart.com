@@ -311,6 +311,49 @@ export async function deleteNewsletterArticle(id: string): Promise<void> {
   await sql()`DELETE FROM newsletter_articles WHERE id = ${id}`;
 }
 
+// --- Engage (week view) ---
+
+export interface EngageDay {
+  date: string;
+  label: string;
+  items: DbEngageItem[];
+}
+
+export async function fetchEngageWeek(start: string, end: string): Promise<EngageDay[]> {
+  const rows = await sql()`
+    SELECT * FROM engage_items
+    WHERE date BETWEEN ${start} AND ${end}
+    ORDER BY date DESC, priority ASC
+  `;
+  if (rows.length === 0) return [];
+
+  const byDate = new Map<string, DbEngageItem[]>();
+  for (const r of rows) {
+    const date = toDateStr(r.date);
+    if (!byDate.has(date)) byDate.set(date, []);
+    byDate.get(date)!.push({ ...r, date } as unknown as DbEngageItem);
+  }
+
+  const days: EngageDay[] = [];
+  for (const [date, items] of byDate) {
+    days.push({ date, label: formatDayLabel(date), items });
+  }
+  return days;
+}
+
+export async function fetchEngageWeekStarts(): Promise<string[]> {
+  const rows = await sql()`SELECT DISTINCT date FROM engage_items ORDER BY date DESC`;
+  const seen = new Set<string>();
+  for (const r of rows) {
+    seen.add(getWeekMonday(toDateStr(r.date)));
+  }
+  return [...seen].sort().reverse();
+}
+
+export async function deleteEngageItem(id: string): Promise<void> {
+  await sql()`DELETE FROM engage_items WHERE id = ${id}`;
+}
+
 // --- Radar (grouped view) ---
 
 export interface RadarItem {
