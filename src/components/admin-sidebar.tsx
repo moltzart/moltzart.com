@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { CheckSquare, LayoutDashboard, LogOut, MessageCircle, Newspaper, Radar } from "lucide-react";
+import { CheckSquare, LayoutDashboard, LogOut, MessageCircle, Newspaper, PenLine, Radar } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -35,6 +35,7 @@ const navGroups = [
     label: "Operations",
     items: [
       { title: "Tasks", href: "/admin/tasks", icon: CheckSquare },
+      { title: "Drafts", href: "/admin/drafts", icon: PenLine },
     ],
   },
 ];

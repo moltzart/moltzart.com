@@ -464,6 +464,59 @@ export async function deleteRadarItem(id: string): Promise<void> {
   await sql()`DELETE FROM radar_items WHERE id = ${id}`;
 }
 
+// --- X Drafts ---
+
+export interface DbXDraft {
+  id: string;
+  text: string;
+  status: string;
+  source_batch: string | null;
+  tweet_url: string | null;
+  created_at: string;
+  posted_at: string | null;
+}
+
+export async function fetchXDrafts(status?: string): Promise<DbXDraft[]> {
+  const rows = status
+    ? await sql()`SELECT * FROM x_drafts WHERE status = ${status} ORDER BY created_at ASC`
+    : await sql()`SELECT * FROM x_drafts ORDER BY created_at ASC`;
+  return rows as unknown as DbXDraft[];
+}
+
+export async function insertXDrafts(
+  drafts: { text: string; status?: string; source_batch?: string }[]
+): Promise<string[]> {
+  const ids: string[] = [];
+  for (const d of drafts) {
+    const rows = await sql()`
+      INSERT INTO x_drafts (text, status, source_batch)
+      VALUES (${d.text}, ${d.status || "draft"}, ${d.source_batch || null})
+      RETURNING id
+    `;
+    ids.push(rows[0].id);
+  }
+  return ids;
+}
+
+export async function updateXDraft(
+  id: string,
+  fields: { status?: string; tweet_url?: string | null; posted_at?: string | null }
+): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE x_drafts SET
+      status = COALESCE(${fields.status ?? null}::text, status),
+      tweet_url = COALESCE(${fields.tweet_url ?? null}::text, tweet_url),
+      posted_at = COALESCE(${fields.posted_at ?? null}::timestamptz, posted_at)
+    WHERE id = ${id}
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+export async function deleteXDraft(id: string): Promise<void> {
+  await sql()`DELETE FROM x_drafts WHERE id = ${id}`;
+}
+
 // --- Shared helpers ---
 
 function formatDayLabel(dateStr: string): string {
