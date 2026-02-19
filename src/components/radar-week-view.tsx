@@ -146,25 +146,27 @@ export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
                             >
                               <div className="flex items-start gap-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
+                                  <div className="mb-1">
                                     <LaneTag lane={item.lane} />
-                                    {item.link ? (
-                                      <a
-                                        href={item.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors hover:underline"
-                                      >
-                                        {item.title}
-                                      </a>
-                                    ) : (
-                                      <span className="text-sm font-medium text-zinc-200">{item.title}</span>
-                                    )}
-                                    {item.link && (
-                                      <a href={item.link} target="_blank" rel="noopener noreferrer">
-                                        <ExternalLink size={12} className="text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0" />
-                                      </a>
-                                    )}
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                      {item.link ? (
+                                        <a
+                                          href={item.link}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors hover:underline"
+                                        >
+                                          {item.title}
+                                        </a>
+                                      ) : (
+                                        <span className="text-sm font-medium text-zinc-200">{item.title}</span>
+                                      )}
+                                      {item.link && (
+                                        <a href={item.link} target="_blank" rel="noopener noreferrer">
+                                          <ExternalLink size={12} className="text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0" />
+                                        </a>
+                                      )}
+                                    </div>
                                   </div>
                                   {item.note && (
                                     item.note.includes("\n") ? (

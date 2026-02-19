@@ -70,9 +70,9 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
                   return (
                     <div key={article.id} className="flex items-start gap-2 px-4 py-3 hover:bg-zinc-800/40 transition-colors group">
                       <Wrapper {...linkProps} className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="mb-1">
                           {article.category && <PillarTag pillar={article.category} />}
-                          <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors truncate">
+                          <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors truncate mt-1">
                             {article.title}
                           </p>
                         </div>
