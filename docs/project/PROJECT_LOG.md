@@ -1,5 +1,11 @@
 # Project Log
 
+## 2026-02-21 (session 13)
+
+- Added `GET /api/ingest/task` with optional `?status=` query param so Moltzart can list tasks programmatically. Returns full task objects sorted by `created_at DESC`. Added `fetchTasksByStatus()` to `db.ts`.
+- **Why:** Moltzart had no way to get task IDs without scraping admin HTML. Now he can `GET ?status=in_progress`, match tasks to his TODO.md, and close them via the existing `PATCH /api/ingest/task/:id`.
+- **Next:** Verify Moltzart's next run successfully lists and closes tasks via the new GET + existing PATCH flow.
+
 ## 2026-02-19 (session 12)
 
 - Built full X Drafts pipeline: `x_drafts` table, `POST/GET /api/ingest/draft`, `PATCH /api/ingest/draft/:id`, `DELETE /api/admin/draft/:id`, `/admin/drafts/[week]` page with weekly view pattern, Drafts added to sidebar under Operations.
