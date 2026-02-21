@@ -136,6 +136,16 @@ export async function fetchTasksDb(): Promise<DbTask[]> {
   })) as unknown as DbTask[];
 }
 
+export async function fetchTasksByStatus(status?: string): Promise<DbTask[]> {
+  const rows = status
+    ? await sql()`SELECT * FROM tasks WHERE status = ${status} ORDER BY created_at DESC`
+    : await sql()`SELECT * FROM tasks ORDER BY created_at DESC`;
+  return rows.map((r) => ({
+    ...r,
+    due_date: r.due_date ? toDateStr(r.due_date) : null,
+  })) as unknown as DbTask[];
+}
+
 export async function insertTask(
   title: string,
   opts?: { detail?: string; priority?: string; effort?: string; due_date?: string; blocked_by?: string; status?: string }
