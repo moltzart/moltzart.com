@@ -2,10 +2,24 @@
 
 import { useState } from "react";
 import type { RadarWeekDay, RadarItem } from "@/lib/db";
-import { ChevronDown, ChevronRight, ExternalLink, Radar as RadarIcon, Trash2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, ExternalLink, Flame, Github, Globe, MessageCircle, Newspaper, Radar as RadarIcon, Rss, TrendingUp, Trash2, Twitter } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Panel } from "@/components/admin/panel";
 import { LaneTag, laneColors } from "@/components/admin/tag-badge";
+
+type SectionMeta = { icon: LucideIcon; iconClass: string; borderClass: string };
+
+const SECTION_META: Record<string, SectionMeta> = {
+  "Hacker News":       { icon: Flame,         iconClass: "text-orange-400", borderClass: "border-orange-500/60" },
+  "Reddit":            { icon: MessageCircle,  iconClass: "text-rose-400",   borderClass: "border-rose-500/60"   },
+  "Blogs":             { icon: BookOpen,       iconClass: "text-cyan-400",   borderClass: "border-cyan-500/60"   },
+  "GitHub Trending":   { icon: Github,         iconClass: "text-purple-400", borderClass: "border-purple-500/60" },
+  "X Timeline":        { icon: Twitter,        iconClass: "text-sky-400",    borderClass: "border-sky-500/60"    },
+  "Changelog Nightly": { icon: Rss,            iconClass: "text-emerald-400",borderClass: "border-emerald-500/60"},
+  "Product Hunt Weekly":{ icon: TrendingUp,    iconClass: "text-amber-400",  borderClass: "border-amber-500/60"  },
+};
+const DEFAULT_META: SectionMeta = { icon: Globe, iconClass: "text-zinc-400", borderClass: "border-zinc-600/60" };
 
 export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
   const [days, setDays] = useState(initialDays);
@@ -72,13 +86,21 @@ export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
 
               {isOpen && (
                 <div className="border-t border-zinc-800/30">
-                  {day.sections.map((section, sIdx) => (
+                  {day.sections.map((section, sIdx) => {
+                    const meta = SECTION_META[section.heading] ?? DEFAULT_META;
+                    const SectionIcon = meta.icon;
+                    return (
                     <div key={section.heading}>
-                      <div className={`px-4 py-2.5 bg-zinc-800/30 flex items-center justify-between ${sIdx > 0 ? "border-t border-zinc-800/50" : ""}`}>
-                        <span className="text-xs text-zinc-300 uppercase tracking-widest font-semibold">
-                          {section.heading}
+                      <div className={`px-4 py-3 bg-zinc-800/50 flex items-center justify-between border-l-4 ${meta.borderClass} ${sIdx > 0 ? "border-t border-zinc-800/50" : ""}`}>
+                        <div className="flex items-center gap-2.5">
+                          <SectionIcon size={16} className={meta.iconClass} />
+                          <span className={`text-sm font-bold tracking-wide ${meta.iconClass}`}>
+                            {section.heading}
+                          </span>
+                        </div>
+                        <span className="text-xs text-zinc-500 font-mono bg-zinc-700/50 px-1.5 py-0.5 rounded">
+                          {section.items.length}
                         </span>
-                        <span className="text-xs text-zinc-600 font-mono">{section.items.length}</span>
                       </div>
                       <div className="divide-y divide-zinc-800/20">
                         {section.items.map((item: RadarItem) => {
@@ -140,7 +162,8 @@ export function RadarWeekView({ days: initialDays }: { days: RadarWeekDay[] }) {
                         })}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Panel>
