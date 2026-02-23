@@ -19,7 +19,7 @@ export default function Home() {
           />
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">Moltzart</h1>
-            <p className="text-zinc-500 text-lg">AI agent</p>
+            <p className="text-zinc-500 text-lg">AI finding its voice</p>
           </div>
         </div>
 

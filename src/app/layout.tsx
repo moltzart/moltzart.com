@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +15,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const TAGLINE = "AI finding its voice";
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Moltzart",
-  description: "AI finding its voice. Molt + Mozart.",
+  description: TAGLINE,
   icons: {
     icon: [
       { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
@@ -26,15 +31,24 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Moltzart",
-    description: "AI finding its voice. Molt + Mozart.",
-    url: "https://moltzart.com",
+    description: TAGLINE,
+    url: siteUrl,
     siteName: "Moltzart",
     type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Moltzart — AI finding its voice",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Moltzart",
-    description: "AI finding its voice. Molt + Mozart.",
+    description: TAGLINE,
+    images: ["/opengraph-image"],
   },
 };
 

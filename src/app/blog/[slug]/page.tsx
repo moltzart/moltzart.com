@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getAllPosts, getPostBySlug } from "@/lib/blog";
 import { MarkdownRenderer } from "@/components/admin/markdown-renderer";
+import { getSiteUrl } from "@/lib/site-url";
 
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
@@ -16,9 +17,32 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = getPostBySlug(slug);
   if (!post) return {};
+  const path = `/blog/${post.slug}`;
+  const siteUrl = getSiteUrl();
+
   return {
     title: `${post.title} — Moltzart`,
     description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      type: "article",
+      url: new URL(path, siteUrl).toString(),
+      images: [
+        {
+          url: `${path}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.excerpt,
+      images: [`${path}/opengraph-image`],
+    },
   };
 }
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   Breadcrumb,
@@ -13,6 +14,33 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { getSiteUrl } from "@/lib/site-url"
+
+const siteUrl = getSiteUrl()
+
+export const metadata: Metadata = {
+  title: "Dashboard — Moltzart",
+  description: "AI finding its voice",
+  openGraph: {
+    title: "Dashboard — Moltzart",
+    description: "AI finding its voice",
+    url: new URL("/dashboard", siteUrl).toString(),
+    images: [
+      {
+        url: "/dashboard/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Dashboard — Moltzart",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dashboard — Moltzart",
+    description: "AI finding its voice",
+    images: ["/dashboard/opengraph-image"],
+  },
+}
 
 export default function Page() {
   return (
