@@ -78,9 +78,18 @@ export async function fetchNewsletterArticlesDb(): Promise<DbNewsletterArticle[]
 export async function insertNewsletterArticles(
   digestDate: string,
   articles: { title: string; source?: string; link?: string; category?: string; description?: string }[]
-): Promise<string[]> {
+): Promise<{ ids: string[]; skipped: string[] }> {
   const ids: string[] = [];
+  const skipped: string[] = [];
   for (const a of articles) {
+    // Check for duplicate title across ALL dates (not just this digest)
+    const existing = await sql()`
+      SELECT id, digest_date FROM newsletter_articles WHERE title = ${a.title} LIMIT 1
+    `;
+    if (existing.length > 0) {
+      skipped.push(`"${a.title}" (already exists from ${toDateStr(existing[0].digest_date)})`);
+      continue;
+    }
     const rows = await sql()`
       INSERT INTO newsletter_articles (digest_date, title, source, link, category, description)
       VALUES (${digestDate}, ${a.title}, ${a.source || null}, ${a.link || null}, ${a.category || null}, ${a.description || null})
@@ -93,7 +102,7 @@ export async function insertNewsletterArticles(
     `;
     ids.push(rows[0].id);
   }
-  return ids;
+  return { ids, skipped };
 }
 
 export async function updateNewsletterArticle(

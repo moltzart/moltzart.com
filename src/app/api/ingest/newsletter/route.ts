@@ -38,6 +38,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const ids = await insertNewsletterArticles(digest_date, articles);
-  return NextResponse.json({ ok: true, ids });
+  const { ids, skipped } = await insertNewsletterArticles(digest_date, articles);
+  return NextResponse.json({ ok: true, ids, ...(skipped.length > 0 ? { skipped } : {}) });
 }
