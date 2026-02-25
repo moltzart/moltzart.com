@@ -328,7 +328,7 @@ async function migrateDrafts() {
         let replyContext: string | null = null;
         let priority: string | null = null;
         let tweetId: string | null = null;
-        let contentLines: string[] = [];
+        const contentLines: string[] = [];
         let feedback: string | null = null;
 
         if (typeStr.match(/Reply to @/i)) {
@@ -454,7 +454,7 @@ async function migrateFeedback() {
           VALUES (${entry.date || new Date().toISOString().slice(0, 10)}, ${entry.signal || 'interest'}, ${entry.topic || ''}, ${entry.source || null}, ${entry.reason || null})
         `;
         total++;
-      } catch (e) {
+      } catch {
         console.warn(`  Skipping malformed feedback line: ${line.slice(0, 80)}`);
       }
     }

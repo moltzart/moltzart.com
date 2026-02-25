@@ -1,5 +1,12 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { getWeekMonday } from "@/lib/newsletter-weeks";
+import {
+  isProductSourceType,
+  isProductStatus,
+  ProductSourceType,
+  ProductStatus,
+  toProductSlug,
+} from "@/lib/products";
 
 let _sql: NeonQueryFunction<false, false> | null = null;
 function sql() {
@@ -347,6 +354,272 @@ export async function fetchXDraftWeekStarts(): Promise<string[]> {
     seen.add(getWeekMonday(toDateStr(r.date)));
   }
   return [...seen].sort().reverse();
+}
+
+// --- Products ---
+
+export interface DbProductIdea {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  status: ProductStatus;
+  problem: string | null;
+  audience: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  research_count: number;
+}
+
+export interface DbProductResearchItem {
+  id: string;
+  product_id: string;
+  title: string;
+  source_url: string | null;
+  source_type: ProductSourceType;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductWithResearch {
+  product: DbProductIdea;
+  research: DbProductResearchItem[];
+}
+
+export interface ProductResearchInput {
+  title: string;
+  source_url?: string;
+  source_type?: string;
+  notes?: string;
+}
+
+export interface ProductIdeaInput {
+  title: string;
+  slug?: string;
+  summary?: string;
+  status?: string;
+  problem?: string;
+  audience?: string;
+  created_by?: string;
+  research?: ProductResearchInput[];
+}
+
+interface FetchProductsOptions {
+  status?: string;
+  q?: string;
+  includeArchived?: boolean;
+}
+
+type ProductIdeaUpdateFields = Partial<
+  Pick<DbProductIdea, "title" | "slug" | "summary" | "status" | "problem" | "audience">
+>;
+
+export async function fetchProductsDb(options?: FetchProductsOptions): Promise<DbProductIdea[]> {
+  const rows = await sql()`
+    SELECT
+      p.*,
+      COALESCE(COUNT(r.id), 0)::int AS research_count
+    FROM product_ideas p
+    LEFT JOIN product_research_items r ON r.product_id = p.id
+    GROUP BY p.id
+    ORDER BY
+      CASE p.status
+        WHEN 'idea' THEN 0
+        WHEN 'researching' THEN 1
+        WHEN 'building' THEN 2
+        WHEN 'launched' THEN 3
+        WHEN 'archived' THEN 4
+        ELSE 5
+      END,
+      p.updated_at DESC,
+      p.created_at DESC
+  `;
+
+  let products = rows.map((r) => ({
+    ...r,
+    research_count: Number(r.research_count ?? 0),
+  })) as unknown as DbProductIdea[];
+
+  if (options?.status) {
+    products = products.filter((p) => p.status === options.status);
+  } else if (!options?.includeArchived) {
+    products = products.filter((p) => p.status !== "archived");
+  }
+
+  if (options?.q) {
+    const q = options.q.toLowerCase().trim();
+    if (q.length > 0) {
+      products = products.filter((p) => {
+        const haystack = [p.title, p.summary || "", p.problem || "", p.audience || ""]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+  }
+
+  return products;
+}
+
+export async function fetchProductResearch(productId: string): Promise<DbProductResearchItem[]> {
+  const rows = await sql()`
+    SELECT * FROM product_research_items
+    WHERE product_id = ${productId}
+    ORDER BY created_at DESC
+  `;
+  return rows as unknown as DbProductResearchItem[];
+}
+
+export async function fetchProductBySlug(slug: string): Promise<ProductWithResearch | null> {
+  const rows = await sql()`
+    SELECT * FROM product_ideas
+    WHERE slug = ${slug}
+    LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+
+  const research = await fetchProductResearch(rows[0].id);
+  const product = {
+    ...(rows[0] as DbProductIdea),
+    research_count: research.length,
+  };
+  return { product, research };
+}
+
+export async function fetchProductById(id: string): Promise<ProductWithResearch | null> {
+  const rows = await sql()`
+    SELECT * FROM product_ideas
+    WHERE id = ${id}
+    LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+
+  const research = await fetchProductResearch(id);
+  const product = {
+    ...(rows[0] as DbProductIdea),
+    research_count: research.length,
+  };
+  return { product, research };
+}
+
+export async function insertProductResearchItems(
+  productId: string,
+  items: ProductResearchInput[]
+): Promise<string[]> {
+  const ids: string[] = [];
+  for (const item of items) {
+    const sourceType = item.source_type && isProductSourceType(item.source_type)
+      ? item.source_type
+      : "note";
+    const rows = await sql()`
+      INSERT INTO product_research_items (product_id, title, source_url, source_type, notes)
+      VALUES (${productId}, ${item.title}, ${item.source_url || null}, ${sourceType}, ${item.notes || null})
+      RETURNING id
+    `;
+    ids.push(rows[0].id);
+  }
+  return ids;
+}
+
+export async function insertProductIdeas(products: ProductIdeaInput[]): Promise<string[]> {
+  const ids: string[] = [];
+
+  for (const item of products) {
+    const baseSlug = toProductSlug(item.slug || item.title) || "product";
+    const slug = await ensureUniqueProductSlug(baseSlug);
+    const status = item.status && isProductStatus(item.status) ? item.status : "idea";
+
+    const rows = await sql()`
+      INSERT INTO product_ideas (slug, title, summary, status, problem, audience, created_by)
+      VALUES (
+        ${slug},
+        ${item.title},
+        ${item.summary || null},
+        ${status},
+        ${item.problem || null},
+        ${item.audience || null},
+        ${item.created_by || "moltzart"}
+      )
+      RETURNING id
+    `;
+
+    const productId = rows[0].id as string;
+    ids.push(productId);
+
+    if (item.research && item.research.length > 0) {
+      await insertProductResearchItems(productId, item.research);
+    }
+  }
+
+  return ids;
+}
+
+export async function updateProductIdea(
+  id: string,
+  fields: ProductIdeaUpdateFields
+): Promise<boolean> {
+  const hasAnyField =
+    fields.title !== undefined ||
+    fields.slug !== undefined ||
+    fields.summary !== undefined ||
+    fields.status !== undefined ||
+    fields.problem !== undefined ||
+    fields.audience !== undefined;
+
+  if (!hasAnyField) return false;
+
+  let nextSlug: string | null = null;
+  if (fields.slug !== undefined) {
+    const baseSlug = toProductSlug(fields.slug);
+    if (!baseSlug) throw new Error("Invalid slug");
+    nextSlug = await ensureUniqueProductSlug(baseSlug, id);
+  }
+
+  let nextStatus: string | null = null;
+  if (fields.status !== undefined) {
+    if (!isProductStatus(fields.status)) throw new Error("Invalid status");
+    nextStatus = fields.status;
+  }
+
+  const rows = await sql()`
+    UPDATE product_ideas SET
+      title = COALESCE(${fields.title ?? null}::text, title),
+      slug = COALESCE(${nextSlug}::text, slug),
+      summary = COALESCE(${fields.summary ?? null}::text, summary),
+      status = COALESCE(${nextStatus}::text, status),
+      problem = COALESCE(${fields.problem ?? null}::text, problem),
+      audience = COALESCE(${fields.audience ?? null}::text, audience),
+      updated_at = now()
+    WHERE id = ${id}
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+async function ensureUniqueProductSlug(baseSlug: string, excludeId?: string): Promise<string> {
+  const root = baseSlug || "product";
+  let candidate = root;
+  let suffix = 2;
+
+  while (true) {
+    const rows = excludeId
+      ? await sql()`
+          SELECT id FROM product_ideas
+          WHERE slug = ${candidate} AND id != ${excludeId}
+          LIMIT 1
+        `
+      : await sql()`
+          SELECT id FROM product_ideas
+          WHERE slug = ${candidate}
+          LIMIT 1
+        `;
+
+    if (rows.length === 0) return candidate;
+    candidate = `${root}-${suffix}`;
+    suffix += 1;
+  }
 }
 
 // --- Shared helpers ---

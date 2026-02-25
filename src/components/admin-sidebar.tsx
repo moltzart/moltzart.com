@@ -12,7 +12,8 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { CheckSquare, LayoutDashboard, LogOut, Newspaper, PenLine } from "lucide-react";
+import { CheckSquare, LayoutDashboard, Lightbulb, LogOut, Newspaper, PenLine } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -27,6 +28,12 @@ const navGroups = [
     label: "Inputs",
     items: [
       { title: "Newsletter", href: "/admin/newsletter", icon: Newspaper },
+    ],
+  },
+  {
+    label: "Products",
+    items: [
+      { title: "Products", href: "/admin/products", icon: Lightbulb },
     ],
   },
   {
@@ -51,9 +58,11 @@ export function AdminSidebar() {
     <Sidebar collapsible="none" className="min-h-svh">
       <SidebarHeader className="px-4 pt-4 pb-2">
         <Link href="/">
-          <img
+          <Image
             src="/avatar.jpg"
             alt="Moltzart"
+            width={40}
+            height={40}
             className="w-10 h-10 rounded-full hover:opacity-80 transition-opacity cursor-pointer"
           />
         </Link>

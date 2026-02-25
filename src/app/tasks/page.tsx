@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   AlertTriangle,
   Clock,
@@ -192,12 +192,14 @@ function RecurringStrip({ tasks }: { tasks: RecurringTask[] }) {
 }
 
 export default function Tasks() {
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return sessionStorage.getItem("tasks_pw") || "";
+  });
   const [data, setData] = useState<ParsedTasks | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [authed, setAuthed] = useState(false);
-  const [checking, setChecking] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchTasks = useCallback(async (pw: string) => {
@@ -230,27 +232,12 @@ export default function Tasks() {
       setError("Connection error");
     }
     setLoading(false);
-    setChecking(false);
   }, []);
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("tasks_pw");
-    if (saved) {
-      setPassword(saved);
-      fetchTasks(saved);
-    } else {
-      setChecking(false);
-    }
-  }, [fetchTasks]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (password.trim()) fetchTasks(password.trim());
   };
-
-  if (checking) {
-    return <div className="min-h-screen bg-zinc-950" />;
-  }
 
   if (!authed) {
     return (

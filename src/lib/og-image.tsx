@@ -111,6 +111,8 @@ export function renderOgImageCard({
             borderLeft: "1px solid rgba(113, 113, 122, 0.35)",
           }}
         >
+          {/* next/image cannot be used inside the OG ImageResponse tree. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatarUrl}
             alt="Moltzart avatar"
