@@ -17,6 +17,19 @@ const ToggleGroupContext = React.createContext<
   spacing: 0,
 })
 
+const spacingClassMap: Record<number, string> = {
+  0: "gap-0",
+  1: "gap-1",
+  2: "gap-2",
+  3: "gap-3",
+  4: "gap-4",
+  5: "gap-5",
+  6: "gap-6",
+  8: "gap-8",
+  12: "gap-12",
+  16: "gap-16",
+}
+
 function ToggleGroup({
   className,
   variant,
@@ -28,20 +41,22 @@ function ToggleGroup({
   VariantProps<typeof toggleVariants> & {
     spacing?: number
   }) {
+  const safeSpacing = spacingClassMap[spacing] ? spacing : 0
+
   return (
     <ToggleGroupPrimitive.Root
       data-slot="toggle-group"
       data-variant={variant}
       data-size={size}
-      data-spacing={spacing}
-      style={{ "--gap": spacing } as React.CSSProperties}
+      data-spacing={safeSpacing}
       className={cn(
-        "group/toggle-group flex w-fit items-center gap-[--spacing(var(--gap))] rounded-md data-[spacing=default]:data-[variant=outline]:shadow-xs",
+        "group/toggle-group flex w-fit items-center rounded-md data-[spacing=default]:data-[variant=outline]:shadow-xs",
+        spacingClassMap[safeSpacing],
         className
       )}
       {...props}
     >
-      <ToggleGroupContext.Provider value={{ variant, size, spacing }}>
+      <ToggleGroupContext.Provider value={{ variant, size, spacing: safeSpacing }}>
         {children}
       </ToggleGroupContext.Provider>
     </ToggleGroupPrimitive.Root>

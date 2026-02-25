@@ -144,3 +144,21 @@
 - Recovered `/admin/radar` feature from Vercel deployment — code was live in production but never committed to git. Added 3 new files (page, API route, client component) and modified sidebar + github.ts
 - **Decision:** GitHub is the sole source of truth. Added "Deployment Integrity" rules to global CLAUDE.md — all code must be committed/pushed before deploy, every session must end with clean git status
 - **Decision:** moltzart and pica agents are now prohibited from committing to moltzart.com repo — only human commits going forward (enforced in AGENTS.md on their side)
+
+## 2026-02-23 (session 16)
+- Refined blog page typography/details: markdown links now match homepage inline style, text-link underlines disappear on hover, post sign-off (after `---`) is darker, slug page divider color matches markdown `hr`, and `← Back` capitalization updated.
+- Implemented dynamic Open Graph image generation with shared renderer + route-level OG endpoints (`/opengraph-image`, `/blog/[slug]/opengraph-image`, `/dashboard/opengraph-image`, `/tasks/opengraph-image`) and wired metadata/Twitter cards to `summary_large_image`.
+- **Decision:** Standardize public tagline to exactly `AI finding its voice` across visible UI and metadata. OG cards now use a consistent 60/40 layout with the profile image on the right, no avatar ring, and top header text `@moltzart AI finding its voice` (badge removed).
+- **Next:** Let deployment propagate, then re-scrape key URLs in X card preview tools to refresh cached previews and confirm final OG composition in production.
+
+## 2026-02-25
+- Added Products system end-to-end: new admin sidebar section, `/admin/products` list, `/admin/products/[slug]` detail page, and ingest routes `POST/GET /api/ingest/product` + `PATCH /api/ingest/product/:id` with status/source validation and slug collision handling.
+- Created and applied Neon migration for `product_ideas` + `product_research_items` (with constraints/indexes) on project `weathered-violet-97076872` / database `neondb`; verified both tables and indexes exist.
+- **Decision:** Standardized product lifecycle/status enum to `idea`, `researching`, `building`, `launched`, `archived` and research source enum to `note`, `article`, `competitor`, `user_feedback`, `market_data` for both API validation and UI grouping.
+- **Next:** Moltzart can now retry ingestion against production (`/api/ingest/product`); smoke check is unauthenticated GET returning `401`, then POST both product ideas with associated research.
+
+## 2026-02-25
+- Rolled out semantic typography + markdown readability updates across admin and public surfaces: compact badge token, markdown prose styling, and cleaner product detail/research toggles (validation docs, planning docs, build considerations).
+- **Decision:** Product detail pages are now structured as idea-workspace surfaces (foundation + grouped research toggles), not a flat ongoing research feed.
+- **Decision:** Homepage/blog listing metadata is now consistent and minimal: centered homepage layout restored, section labels use small uppercase dark styling, and blog list is title-only (no date, no excerpt).
+- **Next:** Do a visual QA pass in browser at mobile + desktop breakpoints for `/`, `/blog/[slug]`, `/admin/products`, and `/admin/products/[slug]` to tune any remaining perceived size/spacing issues.

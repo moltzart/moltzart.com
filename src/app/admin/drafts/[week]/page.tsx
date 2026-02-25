@@ -37,10 +37,10 @@ export default async function DraftsWeekPage({ params }: Props) {
             {weekStarts.length > 0 ? (
               <WeekSelector currentWeek={week} availableWeeks={weekStarts} basePath="/admin/drafts" />
             ) : (
-              <span className="text-sm font-medium text-zinc-200">{formatWeekLabel(week)}</span>
+              <span className="type-body-sm font-medium text-zinc-200">{formatWeekLabel(week)}</span>
             )}
           </div>
-          <span className="text-xs text-zinc-600 font-mono">{totalDrafts} drafts</span>
+          <span className="type-body-sm text-zinc-600">{totalDrafts} drafts</span>
         </div>
       </Panel>
       <DraftsView days={days} />

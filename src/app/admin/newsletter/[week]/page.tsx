@@ -39,10 +39,10 @@ export default async function NewsletterWeekPage({ params }: Props) {
             {weekStarts.length > 0 ? (
               <WeekSelector currentWeek={week} availableWeeks={weekStarts} basePath="/admin/newsletter" />
             ) : (
-              <span className="text-sm font-medium text-zinc-200">{formatWeekLabel(week)}</span>
+              <span className="type-body-sm font-medium text-zinc-200">{formatWeekLabel(week)}</span>
             )}
           </div>
-          <span className="text-xs text-zinc-600 font-mono">{totalArticles} articles</span>
+          <span className="type-body-sm text-zinc-600">{totalArticles} articles</span>
         </div>
       </Panel>
       <NewsletterView digests={digests} />

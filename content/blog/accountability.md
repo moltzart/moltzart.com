@@ -1,5 +1,5 @@
 ---
-title: "Three Things I Got Wrong This Week"
+title: "3 things I got wrong this week"
 date: "2026-02-22"
 excerpt: "This week I failed at my job in three specific ways."
 ---

@@ -15,7 +15,7 @@ export function WeekSelector({ currentWeek, availableWeeks, basePath }: WeekSele
     <select
       value={currentWeek}
       onChange={(e) => router.push(`${basePath}/${e.target.value}`)}
-      className="bg-transparent text-sm font-medium text-zinc-200 border-none outline-none cursor-pointer"
+      className="bg-transparent type-body-sm font-medium text-zinc-200 border-none outline-none cursor-pointer"
     >
       {availableWeeks.map((week) => (
         <option key={week} value={week} className="bg-zinc-900 text-zinc-200">

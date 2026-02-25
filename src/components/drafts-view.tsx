@@ -46,7 +46,7 @@ export function DraftsView({ days: initialDays }: { days: DraftDay[] }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {days.map((day) => {
         const isOpen = openDates.has(day.date);
         return (
@@ -57,8 +57,8 @@ export function DraftsView({ days: initialDays }: { days: DraftDay[] }) {
             >
               <div className="flex items-center gap-2">
                 <PenLine size={14} className="text-teal-500" />
-                <span className="text-sm font-medium text-zinc-200">{day.label}</span>
-                <span className="text-xs text-zinc-600 font-mono">{day.drafts.length} drafts</span>
+                <span className="type-body-sm font-medium text-zinc-200">{day.label}</span>
+                <span className="type-body-sm text-zinc-600">{day.drafts.length} drafts</span>
               </div>
               {isOpen
                 ? <ChevronDown size={14} className="text-zinc-600" />
@@ -91,32 +91,32 @@ function DraftRow({ draft, onDelete }: { draft: DbXDraft; onDelete: () => void }
     <div className="px-4 py-4 hover:bg-zinc-800/40 transition-colors group">
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className={`text-[10px] uppercase tracking-wider font-medium ${statusClass}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`type-badge ${statusClass}`}>
               {draft.status}
             </span>
             {draft.source_batch && (
-              <span className="text-[10px] text-zinc-600 font-mono">{draft.source_batch}</span>
+              <span className="type-body-sm text-zinc-600">{draft.source_batch}</span>
             )}
             {draft.tweet_url && (
               <a
                 href={draft.tweet_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[10px] text-teal-500 hover:text-teal-400 transition-colors"
+                className="inline-flex items-center gap-1 type-body-sm text-teal-500 hover:text-teal-400 transition-colors"
               >
                 <ExternalLink size={10} />
                 <span>view on X</span>
               </a>
             )}
           </div>
-          <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap">
+          <p className="type-body-sm text-zinc-200 whitespace-pre-wrap">
             {draft.text}
           </p>
         </div>
         <button
           onClick={onDelete}
-          className="text-zinc-700 hover:text-red-400 transition-colors p-0.5 opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
+          className="text-zinc-700 hover:text-red-400 transition-colors p-1 opacity-0 group-hover:opacity-100 shrink-0 mt-1"
           title="Delete draft"
         >
           <Trash2 size={14} />

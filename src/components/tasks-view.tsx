@@ -55,7 +55,7 @@ function StatusIcon({ status }: { status: string }) {
 function PriorityBadge({ priority }: { priority: string }) {
   const config = priorityConfig[priority] || priorityConfig.normal;
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider border ${config.badge}`}>
+    <span className={`inline-flex items-center px-2 py-1 rounded type-badge border ${config.badge}`}>
       {priority}
     </span>
   );
@@ -66,14 +66,14 @@ function TaskRow({ task }: { task: DbTask }) {
   const hasDetail = !!task.detail;
 
   return (
-    <div className="flex gap-2.5 py-2.5 px-3 rounded-lg hover:bg-zinc-800/20 transition-colors">
+    <div className="flex gap-3 px-4 py-3 rounded-lg hover:bg-zinc-800/20 transition-colors">
       <div className="flex items-center h-6 shrink-0">
         <StatusIcon status={task.status} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-2">
           <span
-            className={`text-sm flex-1 ${
+            className={`type-body-sm flex-1 ${
               task.status === "done" ? "text-zinc-500 line-through" : "text-zinc-200"
             }`}
           >
@@ -81,10 +81,10 @@ function TaskRow({ task }: { task: DbTask }) {
           </span>
           <div className="flex items-center gap-2 shrink-0">
             {task.effort && (
-              <span className="text-[10px] font-mono text-zinc-600">{task.effort}</span>
+              <span className="type-body-sm text-zinc-600">{task.effort}</span>
             )}
             {task.due_date && (
-              <span className="text-[10px] font-mono text-zinc-500">{task.due_date}</span>
+              <span className="type-body-sm text-zinc-500">{task.due_date}</span>
             )}
             <PriorityBadge priority={task.priority} />
             {hasDetail && (
@@ -98,10 +98,10 @@ function TaskRow({ task }: { task: DbTask }) {
           </div>
         </div>
         {hasDetail && expanded && (
-          <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{task.detail}</p>
+          <p className="type-body-sm text-zinc-500 mt-1">{task.detail}</p>
         )}
         {task.blocked_by && (
-          <p className="text-[10px] text-orange-400/80 mt-0.5">Blocked by: {task.blocked_by}</p>
+          <p className="type-body-sm text-orange-400/80 mt-1">Blocked by: {task.blocked_by}</p>
         )}
       </div>
     </div>
@@ -144,13 +144,13 @@ export function TasksView({ initialData }: { initialData: DbTask[] }) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
           <div className="flex items-center gap-2">
             <ListTodo size={14} className="text-teal-500" />
-            <span className="text-sm font-medium text-zinc-200">Tasks</span>
-            <span className="flex items-center gap-2 text-xs">
-              <span className="font-mono text-zinc-300">{stats.open}</span>
+            <span className="type-body-sm font-medium text-zinc-200">Tasks</span>
+            <span className="flex items-center gap-2 type-body-sm">
+              <span className="text-zinc-300">{stats.open}</span>
               <span className="text-zinc-600">open</span>
-              <span className="font-mono text-amber-400">{stats.inProgress}</span>
+              <span className="text-amber-400">{stats.inProgress}</span>
               <span className="text-zinc-600">in progress</span>
-              <span className="font-mono text-emerald-400">{stats.done}</span>
+              <span className="text-emerald-400">{stats.done}</span>
               <span className="text-zinc-600">done</span>
             </span>
           </div>
@@ -165,7 +165,7 @@ export function TasksView({ initialData }: { initialData: DbTask[] }) {
         </div>
 
         {data.length === 0 ? (
-          <p className="text-sm text-zinc-500 py-8 text-center">No tasks yet.</p>
+          <p className="type-body-sm text-zinc-500 py-8 text-center">No tasks yet.</p>
         ) : (
           <div className="divide-y divide-zinc-800/30">
             {data.map((task) => <TaskRow key={task.id} task={task} />)}

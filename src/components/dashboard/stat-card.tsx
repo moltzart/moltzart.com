@@ -16,13 +16,13 @@ export function StatCard({ title, value, subtitle, href, children }: StatCardPro
       href={href}
       className="group rounded-lg border border-zinc-700/50 bg-zinc-800/60 p-4 hover:bg-zinc-800/40 transition-colors"
     >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">{title}</span>
+      <div className="flex items-center justify-between mb-2">
+        <span className="type-label text-zinc-500">{title}</span>
         <ArrowUpRight size={12} className="text-zinc-700 group-hover:text-teal-400 transition-colors" />
       </div>
-      <div className="text-2xl font-semibold tracking-tight text-zinc-100 font-mono">{value}</div>
+      <div className="type-h2 text-zinc-100">{value}</div>
       {subtitle && (
-        <p className="text-xs text-zinc-600 mt-0.5">{subtitle}</p>
+        <p className="type-body-sm text-zinc-600 mt-1">{subtitle}</p>
       )}
       {children && <div className="mt-2">{children}</div>}
     </Link>

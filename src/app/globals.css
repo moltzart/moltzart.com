@@ -10,6 +10,26 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --text-3xs: clamp(0.625rem, 0.6rem + 0.1vw, 0.6875rem);
+  --text-3xs--line-height: 1.35;
+  --text-2xs: clamp(0.6875rem, 0.66rem + 0.12vw, 0.75rem);
+  --text-2xs--line-height: 1.4;
+  --text-xs: clamp(0.75rem, 0.72rem + 0.14vw, 0.8125rem);
+  --text-xs--line-height: 1.45;
+  --text-sm: clamp(0.875rem, 0.84rem + 0.16vw, 0.9375rem);
+  --text-sm--line-height: 1.55;
+  --text-base: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  --text-base--line-height: 1.65;
+  --text-lg: clamp(1.125rem, 1.05rem + 0.32vw, 1.25rem);
+  --text-lg--line-height: 1.55;
+  --text-xl: clamp(1.25rem, 1.13rem + 0.5vw, 1.5rem);
+  --text-xl--line-height: 1.4;
+  --text-2xl: clamp(1.5rem, 1.3rem + 0.85vw, 1.875rem);
+  --text-2xl--line-height: 1.25;
+  --text-3xl: clamp(1.875rem, 1.55rem + 1.35vw, 2.5rem);
+  --text-3xl--line-height: 1.15;
+  --text-4xl: clamp(2.25rem, 1.8rem + 1.9vw, 3.25rem);
+  --text-4xl--line-height: 1.08;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -127,5 +147,90 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .type-display {
+    @apply text-4xl font-semibold tracking-tight;
+  }
+
+  .type-h1 {
+    @apply text-3xl font-medium tracking-tight;
+  }
+
+  .type-h2 {
+    @apply text-2xl font-medium tracking-tight;
+  }
+
+  .type-h3 {
+    @apply text-xl font-medium tracking-tight;
+  }
+
+  .type-lead {
+    @apply text-lg leading-relaxed;
+  }
+
+  .type-body {
+    @apply text-base leading-relaxed;
+  }
+
+  .type-body-sm {
+    @apply text-sm leading-relaxed;
+  }
+
+  .type-label {
+    @apply text-xs uppercase tracking-[0.08em] font-medium;
+  }
+
+  .type-badge {
+    @apply text-3xs leading-none uppercase tracking-[0.08em] font-medium font-mono;
+  }
+
+  .type-code {
+    @apply text-sm font-mono;
+  }
+
+  .doc-markdown {
+    @apply prose prose-invert prose-zinc max-w-none;
+    @apply prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-zinc-100;
+    @apply prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl;
+    @apply prose-p:text-base prose-p:text-zinc-300 prose-p:leading-relaxed;
+    @apply prose-li:text-base prose-li:text-zinc-300 prose-li:leading-relaxed;
+    @apply prose-strong:text-zinc-100;
+    @apply prose-a:text-zinc-100 prose-a:underline prose-a:underline-offset-2;
+    @apply prose-code:text-amber-300 prose-code:bg-zinc-800/50 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-normal;
+    @apply prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800;
+    @apply prose-table:text-sm prose-th:text-zinc-400 prose-th:font-medium prose-td:text-zinc-300;
+    @apply prose-hr:border-zinc-800;
+  }
+
+  .doc-markdown a {
+    @apply transition-colors;
+  }
+
+  .doc-markdown a:hover {
+    @apply text-zinc-50 no-underline;
+  }
+
+  .doc-markdown > :first-child {
+    margin-top: 0;
+  }
+
+  .doc-markdown > :last-child {
+    margin-bottom: 0;
+  }
+
+  .doc-markdown :where(p, ul, ol, blockquote) {
+    max-width: 65ch;
+  }
+
+  .doc-markdown-compact {
+    @apply prose-p:my-2 prose-li:my-0 prose-headings:mt-4 prose-headings:mb-2;
+    @apply prose-p:text-sm prose-li:text-sm prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg;
+  }
+
+  .doc-markdown-subtle {
+    @apply prose-p:text-zinc-400 prose-li:text-zinc-400;
   }
 }

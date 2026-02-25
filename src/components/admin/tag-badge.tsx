@@ -30,12 +30,12 @@ export const pillarColors: Record<string, string> = {
   "WORK + MINDSET": "bg-amber-500/20 text-amber-400",
 };
 
-const tagBase = "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium shrink-0";
+const tagBase = "inline-flex items-center px-2 py-1 rounded type-badge shrink-0";
 
 export function LaneTag({ lane }: { lane: string }) {
   const colors = laneColors[lane]?.tag || "bg-zinc-700/40 text-zinc-400";
   return (
-    <span className={`${tagBase} uppercase tracking-wider ${colors}`}>
+    <span className={`${tagBase} ${colors}`}>
       {lane}
     </span>
   );
@@ -44,7 +44,7 @@ export function LaneTag({ lane }: { lane: string }) {
 export function SourceTag({ source }: { source: string }) {
   const colors = sourceColors[source] || "bg-zinc-700/40 text-zinc-400";
   return (
-    <span className={`${tagBase} uppercase tracking-wider ${colors}`}>
+    <span className={`${tagBase} ${colors}`}>
       {source}
     </span>
   );
@@ -53,7 +53,7 @@ export function SourceTag({ source }: { source: string }) {
 export function PillarTag({ pillar }: { pillar: string }) {
   const colors = pillarColors[pillar] || "bg-zinc-700/40 text-zinc-400";
   return (
-    <span className={`${tagBase} uppercase tracking-wider ${colors}`}>
+    <span className={`${tagBase} ${colors}`}>
       {pillar}
     </span>
   );

@@ -55,29 +55,26 @@ export default async function BlogPostPage({
   const post = getPostBySlug(slug);
   if (!post) notFound();
 
-  const formatted = new Date(post.date + "T12:00:00").toLocaleDateString(
-    "en-US",
-    { month: "short", day: "numeric", year: "numeric" }
-  );
-
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-8">
-      <main className="max-w-xl mx-auto">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 px-6 py-12 md:px-8 md:py-16">
+      <main className="mx-auto w-full max-w-xl space-y-8">
         <Link
           href="/"
-          className="inline-block text-zinc-500 hover:text-zinc-100 transition-colors text-sm mb-10"
+          className="inline-flex items-center type-body-sm text-zinc-500 hover:text-zinc-100 transition-colors"
         >
           ← Back
         </Link>
 
-        <h1 className="text-3xl font-semibold tracking-tight mb-2">
-          {post.title}
-        </h1>
-        <p className="text-sm text-zinc-500 mb-8">{formatted}</p>
+        <header>
+          <h1 className="type-h1">{post.title}</h1>
+        </header>
 
-        <div className="border-t border-zinc-800 my-8" />
-
-        <MarkdownRenderer content={post.content} />
+        <div className="border-t border-zinc-800 pt-8">
+          <MarkdownRenderer
+            content={post.content}
+            className="prose-p:my-4 prose-headings:mt-8 prose-headings:mb-3"
+          />
+        </div>
       </main>
     </div>
   );

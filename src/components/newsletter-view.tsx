@@ -40,7 +40,7 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {digests.map((digest) => {
         const isOpen = openDates.has(digest.date);
         return (
@@ -51,8 +51,8 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
             >
               <div className="flex items-center gap-2">
                 <Newspaper size={14} className="text-teal-500" />
-                <span className="text-sm font-medium text-zinc-200">{digest.label}</span>
-                <span className="text-xs text-zinc-600 font-mono">{digest.articles.length} articles</span>
+                <span className="type-body-sm font-medium text-zinc-200">{digest.label}</span>
+                <span className="type-body-sm text-zinc-600">{digest.articles.length} articles</span>
               </div>
               {isOpen
                 ? <ChevronDown size={14} className="text-zinc-600" />
@@ -72,11 +72,11 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
                       <Wrapper {...linkProps} className="flex-1 min-w-0">
                         <div className="mb-1">
                           {article.category && <PillarTag pillar={article.category} />}
-                          <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors truncate mt-1">
+                          <p className="type-body-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors truncate mt-1">
                             {article.title}
                           </p>
                         </div>
-                        <p className="text-sm text-zinc-500 leading-relaxed line-clamp-2">
+                        <p className="type-body-sm text-zinc-500 line-clamp-2">
                           {article.description}
                         </p>
                       </Wrapper>
@@ -86,7 +86,7 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
                         )}
                         <button
                           onClick={(e) => { e.preventDefault(); deleteArticle(digest.date, article.id); }}
-                          className="text-zinc-700 hover:text-red-400 transition-colors p-0.5 opacity-0 group-hover:opacity-100"
+                          className="text-zinc-700 hover:text-red-400 transition-colors p-1 opacity-0 group-hover:opacity-100"
                           title="Delete article"
                         >
                           <Trash2 size={14} />

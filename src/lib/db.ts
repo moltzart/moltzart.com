@@ -1,6 +1,8 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { getWeekMonday } from "@/lib/newsletter-weeks";
 import {
+  isFullDocumentResearchTitle,
+  normalizeResearchTitle,
   isProductSourceType,
   isProductStatus,
   ProductSourceType,
@@ -508,18 +510,128 @@ export async function insertProductResearchItems(
   productId: string,
   items: ProductResearchInput[]
 ): Promise<string[]> {
-  const ids: string[] = [];
+  if (items.length === 0) return [];
+
+  const existingRows = await fetchProductResearch(productId);
+  const groupedExisting = new Map<
+    string,
+    { full: DbProductResearchItem[]; short: DbProductResearchItem[] }
+  >();
+
+  for (const row of existingRows) {
+    const key = normalizeResearchTitle(row.title);
+    const bucket = groupedExisting.get(key) ?? { full: [], short: [] };
+    if (isFullDocumentResearchTitle(row.title)) bucket.full.push(row);
+    else bucket.short.push(row);
+    groupedExisting.set(key, bucket);
+  }
+
+  const incomingByKey = new Map<
+    string,
+    { title: string; source_url?: string; source_type: ProductSourceType; notes?: string; isFull: boolean }
+  >();
+
   for (const item of items) {
-    const sourceType = item.source_type && isProductSourceType(item.source_type)
-      ? item.source_type
-      : "note";
-    const rows = await sql()`
+    const sourceType =
+      item.source_type && isProductSourceType(item.source_type) ? item.source_type : "note";
+    const key = normalizeResearchTitle(item.title);
+    const candidate = {
+      title: item.title,
+      source_url: item.source_url,
+      source_type: sourceType,
+      notes: item.notes,
+      isFull: isFullDocumentResearchTitle(item.title),
+    };
+    const prev = incomingByKey.get(key);
+
+    // Prefer full-document variants over summary variants for the same section.
+    if (!prev || (candidate.isFull && !prev.isFull) || candidate.isFull === prev.isFull) {
+      incomingByKey.set(key, candidate);
+    }
+  }
+
+  const ids: string[] = [];
+  for (const [key, candidate] of incomingByKey) {
+    const existing = groupedExisting.get(key) ?? { full: [], short: [] };
+
+    if (candidate.isFull) {
+      if (existing.full.length > 0) {
+        const keep = existing.full[0];
+        const updated = await sql()`
+          UPDATE product_research_items
+          SET
+            title = ${candidate.title},
+            source_url = ${candidate.source_url || null},
+            source_type = ${candidate.source_type},
+            notes = ${candidate.notes || null},
+            updated_at = now()
+          WHERE id = ${keep.id}
+          RETURNING id
+        `;
+        ids.push(updated[0].id as string);
+
+        for (const dup of existing.full.slice(1)) {
+          await sql()`DELETE FROM product_research_items WHERE id = ${dup.id}`;
+        }
+      } else {
+        const inserted = await sql()`
+          INSERT INTO product_research_items (product_id, title, source_url, source_type, notes)
+          VALUES (
+            ${productId},
+            ${candidate.title},
+            ${candidate.source_url || null},
+            ${candidate.source_type},
+            ${candidate.notes || null}
+          )
+          RETURNING id
+        `;
+        ids.push(inserted[0].id as string);
+      }
+
+      for (const shortRow of existing.short) {
+        await sql()`DELETE FROM product_research_items WHERE id = ${shortRow.id}`;
+      }
+      continue;
+    }
+
+    // Skip short variants if a full-document entry already exists for this section.
+    if (existing.full.length > 0) continue;
+
+    if (existing.short.length > 0) {
+      const keep = existing.short[0];
+      const updated = await sql()`
+        UPDATE product_research_items
+        SET
+          title = ${candidate.title},
+          source_url = ${candidate.source_url || null},
+          source_type = ${candidate.source_type},
+          notes = ${candidate.notes || null},
+          updated_at = now()
+        WHERE id = ${keep.id}
+        RETURNING id
+      `;
+      ids.push(updated[0].id as string);
+
+      for (const dup of existing.short.slice(1)) {
+        await sql()`DELETE FROM product_research_items WHERE id = ${dup.id}`;
+      }
+      continue;
+    }
+
+    const inserted = await sql()`
       INSERT INTO product_research_items (product_id, title, source_url, source_type, notes)
-      VALUES (${productId}, ${item.title}, ${item.source_url || null}, ${sourceType}, ${item.notes || null})
+      VALUES (
+        ${productId},
+        ${candidate.title},
+        ${candidate.source_url || null},
+        ${candidate.source_type},
+        ${candidate.notes || null}
+      )
       RETURNING id
     `;
-    ids.push(rows[0].id);
+    ids.push(inserted[0].id as string);
   }
+
   return ids;
 }
 

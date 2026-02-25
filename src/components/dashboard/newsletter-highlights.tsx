@@ -19,12 +19,12 @@ export function NewsletterHighlights({ articles, date }: NewsletterHighlightsPro
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
         <div className="flex items-center gap-2">
           <Newspaper size={14} className="text-teal-500" />
-          <span className="text-sm font-medium text-zinc-200">Newsletter Picks</span>
-          {date && <span className="text-xs text-zinc-600 font-mono">{date}</span>}
+          <span className="type-body-sm font-medium text-zinc-200">Newsletter Picks</span>
+          {date && <span className="type-body-sm text-zinc-600">{date}</span>}
         </div>
         <Link
           href="/admin/newsletter"
-          className="text-xs text-zinc-500 hover:text-teal-400 transition-colors flex items-center gap-1"
+          className="type-body-sm text-zinc-500 hover:text-teal-400 transition-colors flex items-center gap-1"
         >
           View all <ArrowUpRight size={10} />
         </Link>
@@ -43,9 +43,9 @@ export function NewsletterHighlights({ articles, date }: NewsletterHighlightsPro
               className="block px-4 py-4 hover:bg-zinc-800/40 transition-colors"
             >
               {article.category && <PillarTag pillar={article.category} />}
-              <p className="text-sm text-zinc-200 truncate mt-1">{article.title}</p>
+              <p className="type-body-sm text-zinc-200 truncate mt-1">{article.title}</p>
               {article.description && (
-                <p className="text-xs text-zinc-500 truncate">{article.description}</p>
+                <p className="type-body-sm text-zinc-500 truncate">{article.description}</p>
               )}
             </Link>
           ))}

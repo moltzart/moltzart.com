@@ -80,21 +80,21 @@ const sectionConfig: Record<
 function StatusIcon({ status }: { status: Task["status"] }) {
   switch (status) {
     case "done":
-      return <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />;
+      return <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-1" />;
     case "partial":
-      return <CircleDot size={14} className="text-amber-400 shrink-0 mt-0.5" />;
+      return <CircleDot size={14} className="text-amber-400 shrink-0 mt-1" />;
     case "open":
-      return <Circle size={14} className="text-zinc-500 shrink-0 mt-0.5" />;
+      return <Circle size={14} className="text-zinc-500 shrink-0 mt-1" />;
   }
 }
 
 function TaskItem({ task }: { task: Task }) {
   return (
-    <div className="flex items-start gap-2.5 py-1.5">
+    <div className="flex items-start gap-3 py-2">
       <StatusIcon status={task.status} />
       <div className="min-w-0">
         <span
-          className={`text-sm ${
+          className={`type-body-sm ${
             task.status === "done"
               ? "text-zinc-500 line-through"
               : "text-zinc-200"
@@ -103,7 +103,7 @@ function TaskItem({ task }: { task: Task }) {
           {task.text}
         </span>
         {task.detail && (
-          <p className="text-xs text-zinc-500 mt-0.5">{task.detail}</p>
+          <p className="type-body-sm text-zinc-500 mt-1">{task.detail}</p>
         )}
       </div>
     </div>
@@ -124,11 +124,11 @@ function SectionCard({ section }: { section: Section }) {
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/20 transition-colors rounded-lg"
       >
         <Icon size={16} className={config.color} />
-        <span className="text-sm font-medium text-zinc-200 flex-1 text-left">
+        <span className="type-body-sm font-medium text-zinc-200 flex-1 text-left">
           {section.title}
         </span>
         <span
-          className={`text-xs font-mono px-2 py-0.5 rounded-full border ${config.badge}`}
+          className={`type-badge px-2 py-1 rounded-full border ${config.badge}`}
         >
           {section.tasks.length}
         </span>
@@ -145,7 +145,7 @@ function SectionCard({ section }: { section: Section }) {
       )}
       {!collapsed && section.tasks.length === 0 && (
         <div className="px-4 pb-3 border-t border-zinc-800/30">
-          <p className="text-xs text-zinc-600 pt-2 italic">Nothing here</p>
+          <p className="type-body-sm text-zinc-600 pt-2 italic">Nothing here</p>
         </div>
       )}
     </Panel>
@@ -161,13 +161,13 @@ function RecurringStrip({ tasks }: { tasks: RecurringTask[] }) {
     <div className="border border-zinc-800/30 rounded-lg bg-zinc-900/20">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800/20 transition-colors rounded-lg"
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/20 transition-colors rounded-lg"
       >
         <Repeat size={14} className="text-zinc-500" />
-        <span className="text-xs font-medium text-zinc-500 flex-1 text-left">
+        <span className="type-label text-zinc-500 flex-1 text-left">
           Recurring
         </span>
-        <span className="text-xs font-mono text-zinc-600">{tasks.length}</span>
+        <span className="type-body-sm text-zinc-600">{tasks.length}</span>
         {open ? (
           <ChevronDown size={12} className="text-zinc-600" />
         ) : (
@@ -176,11 +176,11 @@ function RecurringStrip({ tasks }: { tasks: RecurringTask[] }) {
       </button>
       {open && (
         <div className="px-4 pb-3 border-t border-zinc-800/20">
-          <div className="pt-2 space-y-1.5">
+          <div className="pt-2 space-y-2">
             {tasks.map((t, i) => (
-              <div key={i} className="flex items-center gap-3 text-xs">
+              <div key={i} className="flex items-center gap-3 type-body-sm">
                 <span className="text-zinc-300 flex-1">{t.task}</span>
-                <span className="text-zinc-500 font-mono">{t.schedule}</span>
+                <span className="text-zinc-500">{t.schedule}</span>
                 <span className="text-zinc-600">{t.method}</span>
               </div>
             ))}
@@ -243,23 +243,23 @@ export default function Tasks() {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-8">
         <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <Lock size={18} className="text-zinc-500" />
-            <h1 className="text-xl font-semibold tracking-tight">Tasks</h1>
+            <h1 className="type-h3">Tasks</h1>
           </div>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 text-sm"
+            className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 type-body-sm"
             autoFocus
           />
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-400 type-body-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:active:scale-100"
+            className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] rounded-lg type-body-sm font-medium transition-all disabled:opacity-50 disabled:active:scale-100"
           >
             {loading ? "Loading..." : "View Tasks"}
           </button>
@@ -272,10 +272,10 @@ export default function Tasks() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 md:p-8">
       <div className="max-w-xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-semibold tracking-tight">Tasks</h1>
+          <h1 className="type-h3">Tasks</h1>
           <div className="flex items-center gap-3">
             {lastUpdated && (
-              <span className="text-zinc-600 text-xs font-mono">
+              <span className="type-body-sm text-zinc-600">
                 {lastUpdated.toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",

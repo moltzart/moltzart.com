@@ -71,7 +71,7 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Row 1: Metrics strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <StatCard
           title="Tasks"
           value={taskStats.total}
@@ -80,11 +80,11 @@ export default async function AdminDashboard() {
         >
           <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-400/60 rounded-full"
+              className="h-full bg-teal-400 rounded-full"
               style={{ width: `${taskProgress}%` }}
             />
           </div>
-          <p className="text-[10px] text-zinc-600 mt-1 font-mono">
+          <p className="type-body-sm text-zinc-600 mt-2">
             {taskStats.completed}/{taskStats.total} done
           </p>
         </StatCard>
@@ -103,14 +103,14 @@ export default async function AdminDashboard() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
           <div className="flex items-center gap-2">
             <AlertCircle size={14} className="text-teal-500" />
-            <span className="text-sm font-medium text-zinc-200">Action Queue</span>
+            <span className="type-body-sm font-medium text-zinc-200">Action Queue</span>
             {actions.length > 0 && (
-              <span className="text-xs text-zinc-600 font-mono">{actions.length} items</span>
+              <span className="type-body-sm text-zinc-600">{actions.length} items</span>
             )}
           </div>
           <Link
             href="/admin/tasks"
-            className="text-xs text-zinc-500 hover:text-teal-400 transition-colors flex items-center gap-1"
+            className="type-body-sm text-zinc-500 hover:text-teal-400 transition-colors flex items-center gap-1"
           >
             All tasks <ArrowUpRight size={10} />
           </Link>
@@ -124,12 +124,12 @@ export default async function AdminDashboard() {
               className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors"
             >
               <StatusDot variant={item.dotVariant} pulse={item.type === "urgent"} />
-              <span className="text-sm text-zinc-200 flex-1 min-w-0 truncate">
+              <span className="type-body-sm text-zinc-200 flex-1 min-w-0 truncate">
                 {item.label}
               </span>
               <Badge
                 variant="outline"
-                className="border-zinc-700/50 text-zinc-500 bg-zinc-800/20 text-[10px] shrink-0"
+                className="border-zinc-700/50 text-zinc-500 bg-zinc-800/20 type-badge shrink-0"
               >
                 {item.source}
               </Badge>
