@@ -7,6 +7,7 @@ import {
   fetchTasksDb,
   fetchNewsletterArticlesDb,
 } from "@/lib/db";
+import { normalizeTaskStatusInput } from "@/lib/task-workflow";
 import { Badge } from "@/components/ui/badge";
 import { StatusDot } from "@/components/admin/status-dot";
 import { Panel } from "@/components/admin/panel";
@@ -45,15 +46,16 @@ export default async function AdminDashboard() {
   // Task stats
   const taskStats = { urgent: 0, active: 0, blocked: 0, completed: 0, total: tasks.length };
   for (const t of tasks) {
-    if (t.status === "done") taskStats.completed++;
-    if (t.priority === "urgent" && t.status !== "done") taskStats.urgent++;
-    if (t.status === "in_progress") taskStats.active++;
+    const status = normalizeTaskStatusInput(t.status);
+    if (status === "done") taskStats.completed++;
+    if (t.priority === "urgent" && status !== "done") taskStats.urgent++;
+    if (status === "todo" || status === "in_progress") taskStats.active++;
     if (t.blocked_by) taskStats.blocked++;
   }
 
   // Action queue — urgent tasks only
   const actions: ActionItem[] = [];
-  const urgentTasks = tasks.filter((t) => t.priority === "urgent" && t.status !== "done");
+  const urgentTasks = tasks.filter((t) => t.priority === "urgent" && normalizeTaskStatusInput(t.status) !== "done");
   for (const task of urgentTasks) {
     actions.push({
       type: "urgent",

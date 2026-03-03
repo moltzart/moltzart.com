@@ -1,128 +1,287 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { DbTask } from "@/lib/db";
 import {
-  AlertTriangle,
-  ArrowUp,
-  Circle,
-  CircleDot,
-  CheckCircle2,
+  Calendar,
+  CircleAlert,
   ListTodo,
   RefreshCw,
-  ChevronDown,
-  ChevronRight,
+  GripVertical,
 } from "lucide-react";
 import { Panel } from "@/components/admin/panel";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  TASK_BOARD_STATUSES,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+  normalizeTaskStatusInput,
+} from "@/lib/task-workflow";
 
-const priorityConfig: Record<
-  string,
-  { icon: typeof AlertTriangle; color: string; badge: string }
-> = {
-  urgent: {
-    icon: AlertTriangle,
-    color: "text-red-400",
-    badge: "bg-red-400/10 text-red-400 border-red-400/20",
-  },
-  high: {
-    icon: ArrowUp,
-    color: "text-amber-400",
-    badge: "bg-amber-400/10 text-amber-400 border-amber-400/20",
-  },
-  normal: {
-    icon: Circle,
-    color: "text-zinc-400",
-    badge: "bg-zinc-400/10 text-zinc-400 border-zinc-400/20",
-  },
-  low: {
-    icon: Circle,
-    color: "text-zinc-600",
-    badge: "bg-zinc-600/10 text-zinc-500 border-zinc-600/20",
-  },
-};
+type TaskColumns = Record<TaskStatus, DbTask[]>;
+type DragOverState = { status: TaskStatus; index: number } | null;
 
-function StatusIcon({ status }: { status: string }) {
-  switch (status) {
-    case "done":
-      return <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />;
-    case "in_progress":
-      return <CircleDot size={14} className="text-amber-400 shrink-0" />;
-    default:
-      return <Circle size={14} className="text-zinc-500 shrink-0" />;
-  }
+function getBoardOrder(task: DbTask, fallback: number): number {
+  const n = Number(task.board_order);
+  return Number.isFinite(n) ? n : fallback;
 }
 
-function PriorityBadge({ priority }: { priority: string }) {
-  const config = priorityConfig[priority] || priorityConfig.normal;
+function getCreatedAtComparable(task: DbTask): string {
+  const raw = task.created_at as unknown;
+  if (raw instanceof Date) return raw.toISOString();
+  if (typeof raw === "string") return raw;
+  return String(raw ?? "");
+}
+
+function compareTasks(a: DbTask, b: DbTask): number {
+  const boardDiff = getBoardOrder(a, 0) - getBoardOrder(b, 0);
+  if (boardDiff !== 0) return boardDiff;
+
+  if (a.due_date && b.due_date) {
+    const dueDiff = a.due_date.localeCompare(b.due_date);
+    if (dueDiff !== 0) return dueDiff;
+  }
+
+  if (a.due_date && !b.due_date) return -1;
+  if (!a.due_date && b.due_date) return 1;
+
+  return getCreatedAtComparable(a).localeCompare(getCreatedAtComparable(b));
+}
+
+function buildColumns(tasks: DbTask[]): TaskColumns {
+  const columns: TaskColumns = {
+    backlog: [],
+    todo: [],
+    in_progress: [],
+    done: [],
+  };
+
+  for (const task of tasks) {
+    const status = normalizeTaskStatusInput(task.status);
+    columns[status].push({ ...task, status });
+  }
+
+  for (const status of TASK_BOARD_STATUSES) {
+    columns[status].sort(compareTasks);
+  }
+
+  return columns;
+}
+
+function computeBoardOrder(targetTasks: DbTask[], targetIndex: number): number {
+  const prev = targetIndex > 0 ? getBoardOrder(targetTasks[targetIndex - 1], targetIndex) : null;
+  const next = targetIndex < targetTasks.length ? getBoardOrder(targetTasks[targetIndex], targetIndex + 1) : null;
+
+  if (prev !== null && next !== null) {
+    const middle = (prev + next) / 2;
+    if (Number.isFinite(middle) && middle > prev && middle < next) return middle;
+    return prev + 0.0001;
+  }
+
+  if (prev !== null) return prev + 1;
+  if (next !== null) return next - 1;
+  return 1;
+}
+
+function moveTask(
+  tasks: DbTask[],
+  taskId: string,
+  toStatus: TaskStatus,
+  toIndex: number
+): { nextData: DbTask[]; movedTask: DbTask } | null {
+  const columns = buildColumns(tasks);
+  let sourceStatus: TaskStatus | null = null;
+  let sourceIndex = -1;
+
+  for (const status of TASK_BOARD_STATUSES) {
+    const idx = columns[status].findIndex((task) => task.id === taskId);
+    if (idx !== -1) {
+      sourceStatus = status;
+      sourceIndex = idx;
+      break;
+    }
+  }
+
+  if (!sourceStatus || sourceIndex < 0) return null;
+
+  const sourceTasks = [...columns[sourceStatus]];
+  const [movingTask] = sourceTasks.splice(sourceIndex, 1);
+  if (!movingTask) return null;
+
+  const targetTasks = sourceStatus === toStatus ? sourceTasks : [...columns[toStatus]];
+  let adjustedIndex = toIndex;
+  if (sourceStatus === toStatus && toIndex > sourceIndex) {
+    adjustedIndex -= 1;
+  }
+
+  const clampedIndex = Math.max(0, Math.min(adjustedIndex, targetTasks.length));
+  if (sourceStatus === toStatus && clampedIndex === sourceIndex) return null;
+
+  const boardOrder = computeBoardOrder(targetTasks, clampedIndex);
+  const movedTask: DbTask = {
+    ...movingTask,
+    status: toStatus,
+    board_order: boardOrder,
+  };
+
+  const nextData = tasks.map((task) => (task.id === taskId ? movedTask : task));
+  return { nextData, movedTask };
+}
+
+function TaskCard({
+  task,
+  saving,
+  onDragStart,
+  onDragEnd,
+  onOpenDetail,
+}: {
+  task: DbTask;
+  saving: boolean;
+  onDragStart: (taskId: string) => void;
+  onDragEnd: () => void;
+  onOpenDetail: (taskId: string) => void;
+}) {
+  const isDone = task.status === "done";
+  const canOpenDetail = !isDone;
+  const showMeta = !isDone && (Boolean(task.due_date) || Boolean(task.blocked_by));
+
   return (
-    <span className={`inline-flex items-center px-2 py-1 rounded type-badge border ${config.badge}`}>
-      {priority}
-    </span>
+    <div
+      draggable={!saving}
+      onDragStart={() => onDragStart(task.id)}
+      onDragEnd={onDragEnd}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && canOpenDetail) {
+          e.preventDefault();
+          onOpenDetail(task.id);
+        }
+      }}
+      onClick={() => {
+        if (canOpenDetail) onOpenDetail(task.id);
+      }}
+      tabIndex={0}
+      className={`group rounded-lg border border-zinc-800/60 bg-zinc-900/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60 ${
+        "p-2"
+      } ${
+        saving ? "opacity-60" : "cursor-grab active:cursor-grabbing"
+      }`}
+      aria-label={`Task ${task.title}. Drag to move.`}
+    >
+      <div className="flex items-start gap-2">
+        <GripVertical size={14} className={`${isDone ? "mt-0" : "mt-1"} text-zinc-600 shrink-0`} />
+        <div className="min-w-0 flex-1">
+          <p className={`type-body-sm ${isDone ? "text-zinc-500 line-through" : "text-zinc-200"}`}>
+            {task.title}
+          </p>
+          {showMeta && (
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {task.due_date && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded type-badge border border-zinc-800/80 bg-zinc-900/60 text-zinc-400">
+                  <Calendar size={10} />
+                  {task.due_date}
+                </span>
+              )}
+              {task.blocked_by && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded type-badge border border-orange-400/20 bg-orange-400/10 text-orange-300/80">
+                  <CircleAlert size={10} />
+                  blocked
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
-function TaskRow({ task }: { task: DbTask }) {
-  const [expanded, setExpanded] = useState(false);
-  const hasDetail = !!task.detail;
-
+function DropSlot({
+  active,
+  onDragOver,
+  onDrop,
+}: {
+  active: boolean;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+}) {
   return (
-    <div className="flex gap-3 px-4 py-3 rounded-lg hover:bg-zinc-800/20 transition-colors">
-      <div className="flex items-center h-6 shrink-0">
-        <StatusIcon status={task.status} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-2">
-          <span
-            className={`type-body-sm flex-1 ${
-              task.status === "done" ? "text-zinc-500 line-through" : "text-zinc-200"
-            }`}
-          >
-            {task.title}
-          </span>
-          <div className="flex items-center gap-2 shrink-0">
-            {task.effort && (
-              <span className="type-body-sm text-zinc-600">{task.effort}</span>
-            )}
-            {task.due_date && (
-              <span className="type-body-sm text-zinc-500">{task.due_date}</span>
-            )}
-            <PriorityBadge priority={task.priority} />
-            {hasDetail && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-zinc-600 hover:text-zinc-400 transition-colors"
-              >
-                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              </button>
-            )}
-          </div>
-        </div>
-        {hasDetail && expanded && (
-          <p className="type-body-sm text-zinc-500 mt-1">{task.detail}</p>
-        )}
-        {task.blocked_by && (
-          <p className="type-body-sm text-orange-400/80 mt-1">Blocked by: {task.blocked_by}</p>
-        )}
-      </div>
-    </div>
+    <div
+      className={`rounded transition-all ${active ? "h-4 bg-teal-500/20 border border-teal-500/40" : "h-1"}`}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    />
   );
 }
 
 export function TasksView({ initialData }: { initialData: DbTask[] }) {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<DragOverState>(null);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
 
-  const stats = useMemo(() => {
-    let open = 0;
-    let inProgress = 0;
-    let done = 0;
-    for (const task of data) {
-      if (task.status === "done") done++;
-      else if (task.status === "in_progress") inProgress++;
-      else open++;
+  const columns = useMemo(() => buildColumns(data), [data]);
+  const detailTask = useMemo(
+    () => (detailTaskId ? data.find((task) => task.id === detailTaskId) ?? null : null),
+    [data, detailTaskId]
+  );
+  const stats = useMemo(() => ({
+    backlog: columns.backlog.length,
+    todo: columns.todo.length,
+    inProgress: columns.in_progress.length,
+    done: columns.done.length,
+  }), [columns]);
+
+  async function persistMove(task: DbTask) {
+    const res = await fetch(`/api/admin/task/${task.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: task.status,
+        board_order: task.board_order,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error("Failed to persist move");
     }
-    return { open, inProgress, done };
-  }, [data]);
+  }
+
+  async function applyMove(taskId: string, toStatus: TaskStatus, toIndex: number) {
+    if (savingTaskId) return;
+
+    const previousData = data;
+    const result = moveTask(previousData, taskId, toStatus, toIndex);
+    if (!result) return;
+
+    setError("");
+    setData(result.nextData);
+    setSavingTaskId(taskId);
+
+    try {
+      await persistMove(result.movedTask);
+    } catch {
+      setData(previousData);
+      setError("Could not save task move. Try again.");
+    } finally {
+      setSavingTaskId(null);
+      setDraggingTaskId(null);
+      setDragOver(null);
+    }
+  }
+
+  function handleDrop(status: TaskStatus, index: number, e: React.DragEvent) {
+    e.preventDefault();
+    if (!draggingTaskId) return;
+    void applyMove(draggingTaskId, status, index);
+  }
 
   const refresh = async () => {
     setLoading(true);
@@ -132,28 +291,35 @@ export function TasksView({ initialData }: { initialData: DbTask[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      if (res.ok) setData(await res.json());
+      if (res.ok) {
+        setData(await res.json());
+        setError("");
+      }
     } catch {}
     setLoading(false);
   };
 
   return (
-    <div>
-      <Panel className="flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
-          <div className="flex items-center gap-2">
-            <ListTodo size={14} className="text-teal-500" />
-            <span className="type-body-sm font-medium text-zinc-200">Tasks</span>
-            <span className="flex items-center gap-2 type-body-sm">
-              <span className="text-zinc-300">{stats.open}</span>
-              <span className="text-zinc-600">open</span>
-              <span className="text-amber-400">{stats.inProgress}</span>
-              <span className="text-zinc-600">in progress</span>
-              <span className="text-emerald-400">{stats.done}</span>
-              <span className="text-zinc-600">done</span>
-            </span>
-          </div>
+    <Panel className="flex flex-col h-[calc(100svh-6rem)] overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
+        <div className="flex items-center gap-2">
+          <ListTodo size={14} className="text-teal-500" />
+          <span className="type-body-sm font-medium text-zinc-200">Tasks</span>
+          <span className="flex items-center gap-2 type-body-sm">
+            <span className="text-zinc-300">{stats.backlog}</span>
+            <span className="text-zinc-600">backlog</span>
+            <span className="text-zinc-300">{stats.todo}</span>
+            <span className="text-zinc-600">todo</span>
+            <span className="text-amber-400">{stats.inProgress}</span>
+            <span className="text-zinc-600">in progress</span>
+            <span className="text-emerald-400">{stats.done}</span>
+            <span className="text-zinc-600">done</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {savingTaskId && (
+            <span className="type-body-sm text-zinc-600">saving...</span>
+          )}
           <button
             onClick={refresh}
             disabled={loading}
@@ -163,15 +329,104 @@ export function TasksView({ initialData }: { initialData: DbTask[] }) {
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
+      </div>
 
-        {data.length === 0 ? (
-          <p className="type-body-sm text-zinc-500 py-8 text-center">No tasks yet.</p>
-        ) : (
-          <div className="divide-y divide-zinc-800/30">
-            {data.map((task) => <TaskRow key={task.id} task={task} />)}
+      {error && (
+        <div className="px-4 py-2 border-b border-zinc-800/30">
+          <p className="type-body-sm text-red-400/80">{error}</p>
+        </div>
+      )}
+
+      {data.length === 0 ? (
+        <p className="type-body-sm text-zinc-500 py-8 text-center">No tasks yet.</p>
+      ) : (
+        <div className="flex-1 min-h-0 overflow-x-auto p-3">
+          <div className="min-w-[1080px] h-full grid grid-cols-4 gap-3">
+            {TASK_BOARD_STATUSES.map((status) => {
+              const tasks = columns[status];
+              return (
+                <div
+                  key={status}
+                  className="flex h-full min-h-0 flex-col rounded-lg border border-zinc-800/40 bg-zinc-950/40"
+                  onDragOver={(e) => e.preventDefault()}
+                >
+                  <div className="px-3 py-2 border-b border-zinc-800/40 flex items-center justify-between">
+                    <span className="type-body-sm font-medium text-zinc-200">{TASK_STATUS_LABELS[status]}</span>
+                    <span className="type-body-sm text-zinc-600">{tasks.length}</span>
+                  </div>
+                  <div className="p-2 space-y-1 min-h-0 overflow-y-auto">
+                    {tasks.map((task, index) => (
+                      <div key={task.id} className="space-y-1">
+                        <DropSlot
+                          active={dragOver?.status === status && dragOver.index === index}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            if (draggingTaskId) setDragOver({ status, index });
+                          }}
+                          onDrop={(e) => handleDrop(status, index, e)}
+                        />
+                        <TaskCard
+                          task={task}
+                          saving={savingTaskId === task.id}
+                          onDragStart={(taskId) => {
+                            setDraggingTaskId(taskId);
+                            setError("");
+                          }}
+                          onDragEnd={() => {
+                            setDraggingTaskId(null);
+                            setDragOver(null);
+                          }}
+                          onOpenDetail={(taskId) => setDetailTaskId(taskId)}
+                        />
+                      </div>
+                    ))}
+                    <DropSlot
+                      active={dragOver?.status === status && dragOver.index === tasks.length}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (draggingTaskId) setDragOver({ status, index: tasks.length });
+                      }}
+                      onDrop={(e) => handleDrop(status, tasks.length, e)}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-      </Panel>
-    </div>
+        </div>
+      )}
+      <Sheet open={Boolean(detailTask)} onOpenChange={(open) => !open && setDetailTaskId(null)}>
+        <SheetContent side="right" className="bg-zinc-950 border-zinc-800 text-zinc-100 w-full sm:max-w-md">
+          <SheetHeader className="border-b border-zinc-800/60">
+            <SheetTitle className="text-zinc-100 type-h3">
+              {detailTask?.title ?? "Task"}
+            </SheetTitle>
+            <SheetDescription className="text-zinc-500 type-body-sm">
+              {detailTask ? TASK_STATUS_LABELS[normalizeTaskStatusInput(detailTask.status)] : ""}
+            </SheetDescription>
+          </SheetHeader>
+          {detailTask && (
+            <div className="px-4 py-4 space-y-4 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded border border-zinc-800/70 bg-zinc-900/40 px-3 py-2">
+                  <p className="type-badge text-zinc-500">Due</p>
+                  <p className="type-body-sm text-zinc-200 mt-1">{detailTask.due_date || "—"}</p>
+                </div>
+                <div className="rounded border border-zinc-800/70 bg-zinc-900/40 px-3 py-2">
+                  <p className="type-badge text-zinc-500">Blocked By</p>
+                  <p className="type-body-sm text-zinc-200 mt-1">{detailTask.blocked_by || "—"}</p>
+                </div>
+              </div>
+              <div className="rounded border border-zinc-800/70 bg-zinc-900/30 px-3 py-3">
+                <p className="type-badge text-zinc-500">Detail</p>
+                <p className="type-body-sm text-zinc-300 mt-2 whitespace-pre-wrap">
+                  {detailTask.detail || "No detail added."}
+                </p>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </Panel>
   );
 }

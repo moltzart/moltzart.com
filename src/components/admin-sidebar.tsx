@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { CheckSquare, LayoutDashboard, Lightbulb, LogOut, Newspaper, PenLine } from "lucide-react";
+import { Briefcase, CheckSquare, FileSearch, LayoutDashboard, LogOut, Newspaper, PenLine } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -28,12 +28,13 @@ const navGroups = [
     label: "Inputs",
     items: [
       { title: "Newsletter", href: "/admin/newsletter", icon: Newspaper },
+      { title: "Research", href: "/admin/research", icon: FileSearch },
     ],
   },
   {
-    label: "Products",
+    label: "Projects",
     items: [
-      { title: "Products", href: "/admin/products", icon: Lightbulb },
+      { title: "Projects", href: "/admin/projects", icon: Briefcase },
     ],
   },
   {

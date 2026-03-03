@@ -162,3 +162,18 @@
 - **Decision:** Product detail pages are now structured as idea-workspace surfaces (foundation + grouped research toggles), not a flat ongoing research feed.
 - **Decision:** Homepage/blog listing metadata is now consistent and minimal: centered homepage layout restored, section labels use small uppercase dark styling, and blog list is title-only (no date, no excerpt).
 - **Next:** Do a visual QA pass in browser at mobile + desktop breakpoints for `/`, `/blog/[slug]`, `/admin/products`, and `/admin/products/[slug]` to tune any remaining perceived size/spacing issues.
+
+## 2026-02-25
+- Fixed two production build blockers after deployment failures: added missing product research helper exports in `src/lib/products.ts` and added optional `className` support to `MarkdownRenderer` so product detail markdown usage type-checks in CI.
+- **Decision:** Keep the current UI work (dashboard/products typography/layout updates) and patch compile/deploy breakages surgically instead of reverting feature commits.
+- Published all pending local UI/typography edits in one build-verified sync commit (`bfd7196`) after successful local `npm run build`, then pushed to `main` for Vercel deploy.
+- **Next:** Continue visual QA in production for `/admin`, `/admin/products`, and `/admin/products/[slug]` to confirm style parity with local after cache propagation.
+
+## 2026-03-03
+- Introduced a project-first domain (projects table, fallback to old products when migration is missing) so `/admin/projects` no longer shows an empty board; backend now links research artifacts and product ideas through `project_id`. **Decision:** keep `/admin/products` as a legacy view while projects become the primary entry point.
+- Added project ingestion (`/api/ingest/project`) and detailed project pages (`/admin/projects/[slug]`), plus research artifacts now record `project_id` and surface the linked project from `/admin/research/[id]`.
+- Prepared the new migration `scripts/migrations/20260303_projects_first_model.sql` and the supporting code changes (DB layer, sidebar, project view component) but left the migration unapplied in production pending your approval; lint/build pass except for the pre-existing spacing-grid violation in `markdown-renderer.tsx`.
+- Fixed `/admin/tasks` runtime crash (`a.created_at.localeCompare is not a function`) by normalizing task timestamps to strings at the DB mapping boundary in `src/lib/db.ts` (`created_at`, `updated_at`).
+- Added a defensive timestamp comparator in `src/components/tasks-view.tsx` so task sorting remains safe even if a `Date` slips into client state.
+- **Decision:** Treat Neon datetime coercion at the data boundary as canonical (normalize once in `db.ts`) and keep UI sort logic resilient as a guardrail.
+- **Next:** Smoke check `/admin/tasks` drag/sort behavior in browser and confirm no further Date-vs-string errors after refresh.
