@@ -1747,6 +1747,89 @@ export async function upsertCronJobs(
   return upserted;
 }
 
+// --- Job Runs ---
+
+export interface DbJobRun {
+  id: string;
+  job_id: string;
+  agent_id: string | null;
+  started_at: string;
+  completed_at: string | null;
+  status: string;
+  summary: string | null;
+  created_at: string;
+}
+
+export async function insertJobRun(run: {
+  job_id: string;
+  agent_id?: string;
+  started_at: string;
+  completed_at?: string | null;
+  status: string;
+  summary?: string | null;
+}): Promise<DbJobRun> {
+  const rows = await sql()`
+    INSERT INTO job_runs (job_id, agent_id, started_at, completed_at, status, summary)
+    VALUES (
+      ${run.job_id}, ${run.agent_id || null},
+      ${run.started_at}::timestamptz, ${run.completed_at || null}::timestamptz,
+      ${run.status}, ${run.summary || null}
+    )
+    RETURNING *
+  `;
+  const r = rows[0];
+  return {
+    id: String(r.id),
+    job_id: String(r.job_id),
+    agent_id: r.agent_id ? String(r.agent_id) : null,
+    started_at: toDateTimeStr(r.started_at),
+    completed_at: r.completed_at ? toDateTimeStr(r.completed_at) : null,
+    status: String(r.status),
+    summary: r.summary ? String(r.summary) : null,
+    created_at: toDateTimeStr(r.created_at),
+  };
+}
+
+export async function updateJobRun(
+  id: string,
+  fields: { completed_at?: string; status?: string; summary?: string }
+): Promise<void> {
+  const sets: string[] = [];
+  const vals: unknown[] = [];
+  if (fields.completed_at !== undefined) { sets.push("completed_at"); vals.push(fields.completed_at); }
+  if (fields.status !== undefined) { sets.push("status"); vals.push(fields.status); }
+  if (fields.summary !== undefined) { sets.push("summary"); vals.push(fields.summary); }
+  if (sets.length === 0) return;
+
+  // Build update dynamically
+  await sql()`
+    UPDATE job_runs SET
+      completed_at = COALESCE(${fields.completed_at || null}::timestamptz, completed_at),
+      status = COALESCE(${fields.status || null}, status),
+      summary = COALESCE(${fields.summary || null}, summary)
+    WHERE id = ${id}
+  `;
+}
+
+export async function fetchJobRunsForRange(start: string, end: string): Promise<DbJobRun[]> {
+  const rows = await sql()`
+    SELECT * FROM job_runs
+    WHERE started_at >= ${start}::timestamptz
+      AND started_at < (${end}::date + interval '1 day')
+    ORDER BY started_at
+  `;
+  return rows.map((r) => ({
+    id: String(r.id),
+    job_id: String(r.job_id),
+    agent_id: r.agent_id ? String(r.agent_id) : null,
+    started_at: toDateTimeStr(r.started_at),
+    completed_at: r.completed_at ? toDateTimeStr(r.completed_at) : null,
+    status: String(r.status),
+    summary: r.summary ? String(r.summary) : null,
+    created_at: toDateTimeStr(r.created_at),
+  })) as DbJobRun[];
+}
+
 export async function fetchCronJobs(): Promise<DbCronJob[]> {
   const rows = await sql()`SELECT * FROM cron_jobs ORDER BY name`;
   return rows.map((r) => ({
@@ -1796,7 +1879,15 @@ export async function fetchXDraftsForMonth(start: string, end: string): Promise<
        OR (posted_at IS NOT NULL AND posted_at::date BETWEEN ${start}::date AND ${end}::date)
     ORDER BY created_at
   `;
-  return rows as unknown as DbXDraft[];
+  return rows.map((r) => ({
+    id: String(r.id),
+    text: String(r.text),
+    status: String(r.status),
+    source_batch: r.source_batch ? String(r.source_batch) : null,
+    tweet_url: r.tweet_url ? String(r.tweet_url) : null,
+    created_at: toDateTimeStr(r.created_at),
+    posted_at: r.posted_at ? toDateTimeStr(r.posted_at) : null,
+  })) as DbXDraft[];
 }
 
 export async function fetchNewsletterForMonth(start: string, end: string): Promise<DbNewsletterArticle[]> {

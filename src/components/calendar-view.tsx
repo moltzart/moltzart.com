@@ -1,409 +1,370 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, Zap } from "lucide-react";
 import { CronExpressionParser } from "cron-parser";
-import { StatusDot } from "@/components/admin/status-dot";
-import type {
-  DbCronJob,
-  DbTask,
-  DbXDraft,
-  DbNewsletterArticle,
-} from "@/lib/db";
+import type { DbCronJob, DbJobRun } from "@/lib/db";
+
+// --- Types ---
 
 interface CalendarData {
   crons: DbCronJob[];
-  tasks: DbTask[];
-  drafts: DbXDraft[];
-  newsletter: DbNewsletterArticle[];
+  jobRuns: DbJobRun[];
 }
 
 interface CalendarViewProps {
   initialData: CalendarData;
-  initialYear: number;
-  initialMonth: number;
+  initialStart: string;
 }
+
+type RunStatus = "success" | "error" | "missed" | "upcoming" | "running";
+
+interface DayEvent {
+  name: string;
+  jobId: string;
+  time: string;
+  sortKey: string;
+  colorIdx: number;
+  status: RunStatus;
+  summary?: string;
+}
+
+// --- Color palette for event cards ---
+
+const CARD_COLORS = [
+  "text-emerald-400",
+  "text-amber-400",
+  "text-blue-400",
+  "text-rose-400",
+  "text-purple-400",
+  "text-teal-400",
+  "text-orange-400",
+  "text-cyan-400",
+  "text-pink-400",
+  "text-lime-400",
+];
+
+const PILL_COLORS = [
+  "text-emerald-400 border-emerald-400/30",
+  "text-amber-400 border-amber-400/30",
+  "text-blue-400 border-blue-400/30",
+  "text-rose-400 border-rose-400/30",
+  "text-purple-400 border-purple-400/30",
+  "text-teal-400 border-teal-400/30",
+  "text-orange-400 border-orange-400/30",
+  "text-cyan-400 border-cyan-400/30",
+  "text-pink-400 border-pink-400/30",
+  "text-lime-400 border-lime-400/30",
+];
+
+// --- Status indicator styles ---
+
+const STATUS_INDICATOR: Record<RunStatus, { dot: string; border: string; opacity: string }> = {
+  success: { dot: "bg-emerald-400", border: "border-emerald-400/20", opacity: "" },
+  error: { dot: "bg-red-400", border: "border-red-400/20", opacity: "" },
+  missed: { dot: "bg-amber-400", border: "border-amber-400/20", opacity: "" },
+  running: { dot: "bg-blue-400 animate-pulse", border: "border-blue-400/20", opacity: "" },
+  upcoming: { dot: "bg-zinc-600", border: "border-zinc-800/40", opacity: "opacity-40" },
+};
+
+// --- Date helpers ---
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function toDateKey(d: Date): string {
+function fmtDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function cronStatusVariant(status: string | null): "complete" | "urgent" | "neutral" {
-  if (!status) return "neutral";
-  if (status === "success" || status === "ok") return "complete";
-  if (status === "error" || status === "fail" || status === "failed") return "urgent";
-  return "neutral";
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  return fmtDate(d);
 }
 
-function taskStatusVariant(status: string): "complete" | "active" | "blocked" | "neutral" {
-  if (status === "done") return "complete";
-  if (status === "in_progress") return "active";
-  if (status === "blocked") return "blocked";
-  return "neutral";
+function getWeekDays(startDate: string): string[] {
+  return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
 }
 
-function expandCronRuns(
+function getWeekStart(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() - d.getDay());
+  return fmtDate(d);
+}
+
+function formatTime(d: Date): string {
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return m === 0 ? `${h12}:00 ${ampm}` : `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+function formatTimeSortKey(d: Date): string {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatWeekLabel(startDate: string): string {
+  const start = new Date(startDate + "T12:00:00");
+  const end = new Date(startDate + "T12:00:00");
+  end.setDate(end.getDate() + 6);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  if (start.getMonth() !== end.getMonth()) {
+    return `${start.toLocaleDateString("en-US", opts)} – ${end.toLocaleDateString("en-US", opts)}, ${start.getFullYear()}`;
+  }
+  return `${start.toLocaleDateString("en-US", { month: "short" })} ${start.getDate()}–${end.getDate()}, ${start.getFullYear()}`;
+}
+
+// --- Cron expansion with run status ---
+
+interface AlwaysRunningJob {
+  name: string;
+  frequency: string;
+  colorIdx: number;
+}
+
+function categorizeCrons(
   crons: DbCronJob[],
-  year: number,
-  month: number
-): Map<string, { job: DbCronJob; future: boolean }[]> {
-  const map = new Map<string, { job: DbCronJob; future: boolean }[]>();
+  jobRuns: DbJobRun[],
+  weekDays: string[]
+): { alwaysRunning: AlwaysRunningJob[]; scheduled: Map<string, DayEvent[]> } {
+  const alwaysRunning: AlwaysRunningJob[] = [];
+  const scheduled = new Map<string, DayEvent[]>();
   const now = new Date();
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0, 23, 59, 59);
+  const weekStart = new Date(weekDays[0] + "T00:00:00");
+  weekStart.setDate(weekStart.getDate() - 1);
+  const weekEnd = new Date(weekDays[6] + "T23:59:59");
+  weekEnd.setDate(weekEnd.getDate() + 1);
+  const validDays = new Set(weekDays);
+
+  // Index job runs by job_id + date for quick lookup
+  const runIndex = new Map<string, DbJobRun[]>();
+  for (const run of jobRuns) {
+    const dateKey = run.started_at.slice(0, 10);
+    const key = `${run.job_id}:${dateKey}`;
+    if (!runIndex.has(key)) runIndex.set(key, []);
+    runIndex.get(key)!.push(run);
+  }
+
+  // Build stable color map
+  const colorMap = new Map<string, number>();
+  const sortedNames = [...new Set(crons.map((j) => j.name))].sort();
+  sortedNames.forEach((name, i) => colorMap.set(name, i % CARD_COLORS.length));
 
   for (const job of crons) {
     if (!job.enabled) continue;
+    const colorIdx = colorMap.get(job.name) ?? 0;
+
+    let runs: Date[] = [];
     try {
       const interval = CronExpressionParser.parse(job.schedule_expr, {
-        currentDate: monthStart,
-        endDate: monthEnd,
+        currentDate: weekStart,
+        endDate: weekEnd,
         tz: job.schedule_tz,
       });
       while (true) {
         try {
-          const next = interval.next();
-          const key = toDateKey(next.toDate());
-          if (!map.has(key)) map.set(key, []);
-          map.get(key)!.push({ job, future: next.toDate() > now });
+          runs.push(interval.next().toDate());
         } catch {
           break;
         }
       }
     } catch {
-      // invalid cron expression, skip
+      continue;
+    }
+
+    const weekRuns = runs.filter((r) => validDays.has(fmtDate(r)));
+    if (weekRuns.length > 100) {
+      const perDay = Math.round(weekRuns.length / 7);
+      const freq = perDay >= 24 ? `Every ${Math.round((24 * 60) / perDay)} min` : `${perDay}x daily`;
+      alwaysRunning.push({ name: job.name, frequency: freq, colorIdx });
+      continue;
+    }
+
+    for (const runDate of weekRuns) {
+      const dateKey = fmtDate(runDate);
+      if (!scheduled.has(dateKey)) scheduled.set(dateKey, []);
+
+      // Determine run status
+      const matchKey = `${job.id}:${dateKey}`;
+      const matchingRuns = runIndex.get(matchKey) || [];
+      let status: RunStatus;
+      let summary: string | undefined;
+
+      if (runDate > now) {
+        status = "upcoming";
+      } else if (matchingRuns.length > 0) {
+        // Find the best matching run (closest to expected time)
+        const bestRun = matchingRuns.reduce((best, r) => {
+          const diff = Math.abs(new Date(r.started_at).getTime() - runDate.getTime());
+          const bestDiff = Math.abs(new Date(best.started_at).getTime() - runDate.getTime());
+          return diff < bestDiff ? r : best;
+        });
+        status = bestRun.status as RunStatus;
+        if (status !== "success" && status !== "error" && status !== "running") {
+          status = "success"; // treat unknown statuses as success
+        }
+        summary = bestRun.summary || undefined;
+      } else {
+        status = "missed";
+      }
+
+      scheduled.get(dateKey)!.push({
+        name: job.name,
+        jobId: job.id,
+        time: formatTime(runDate),
+        sortKey: formatTimeSortKey(runDate),
+        colorIdx,
+        status,
+        summary,
+      });
     }
   }
-  return map;
+
+  for (const [, events] of scheduled) {
+    events.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  }
+
+  return { alwaysRunning, scheduled };
 }
 
-export function CalendarView({ initialData, initialYear, initialMonth }: CalendarViewProps) {
+// --- Component ---
+
+export function CalendarView({ initialData, initialStart }: CalendarViewProps) {
   const [data, setData] = useState<CalendarData>(initialData);
-  const [year, setYear] = useState(initialYear);
-  const [month, setMonth] = useState(initialMonth);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [weekStart, setWeekStart] = useState(initialStart);
   const [loading, setLoading] = useState(false);
 
-  const loadMonth = useCallback(async (y: number, m: number) => {
+  const weekDays = useMemo(() => getWeekDays(weekStart), [weekStart]);
+  const todayKey = fmtDate(new Date());
+
+  const loadWeek = useCallback(async (start: string) => {
+    setWeekStart(start);
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/calendar?year=${y}&month=${m}`);
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
+      const end = addDays(start, 6);
+      const res = await fetch(`/api/admin/calendar?start=${start}&end=${end}`);
+      if (res.ok) setData(await res.json());
     } finally {
       setLoading(false);
     }
-    setYear(y);
-    setMonth(m);
-    setSelectedDay(null);
   }, []);
 
-  const goToday = useCallback(() => {
-    const now = new Date();
-    loadMonth(now.getFullYear(), now.getMonth() + 1);
-  }, [loadMonth]);
+  const goPrev = useCallback(() => loadWeek(addDays(weekStart, -7)), [weekStart, loadWeek]);
+  const goNext = useCallback(() => loadWeek(addDays(weekStart, 7)), [weekStart, loadWeek]);
+  const goToday = useCallback(() => loadWeek(getWeekStart(fmtDate(new Date()))), [loadWeek]);
+  const refresh = useCallback(() => loadWeek(weekStart), [weekStart, loadWeek]);
 
-  const goPrev = useCallback(() => {
-    const m = month === 1 ? 12 : month - 1;
-    const y = month === 1 ? year - 1 : year;
-    loadMonth(y, m);
-  }, [year, month, loadMonth]);
-
-  const goNext = useCallback(() => {
-    const m = month === 12 ? 1 : month + 1;
-    const y = month === 12 ? year + 1 : year;
-    loadMonth(y, m);
-  }, [year, month, loadMonth]);
-
-  // Build day-indexed maps
-  const cronRuns = useMemo(() => expandCronRuns(data.crons, year, month), [data.crons, year, month]);
-
-  const tasksByDay = useMemo(() => {
-    const m = new Map<string, DbTask[]>();
-    for (const t of data.tasks) {
-      const key = t.due_date || t.created_at.slice(0, 10);
-      if (!m.has(key)) m.set(key, []);
-      m.get(key)!.push(t);
-    }
-    return m;
-  }, [data.tasks]);
-
-  const draftsByDay = useMemo(() => {
-    const m = new Map<string, DbXDraft[]>();
-    for (const d of data.drafts) {
-      const key = (d.posted_at || d.created_at).slice(0, 10);
-      if (!m.has(key)) m.set(key, []);
-      m.get(key)!.push(d);
-    }
-    return m;
-  }, [data.drafts]);
-
-  const newsletterByDay = useMemo(() => {
-    const m = new Map<string, DbNewsletterArticle[]>();
-    for (const a of data.newsletter) {
-      if (!m.has(a.digest_date)) m.set(a.digest_date, []);
-      m.get(a.digest_date)!.push(a);
-    }
-    return m;
-  }, [data.newsletter]);
-
-  // Build calendar grid
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDate = new Date(year, month, 0).getDate();
-  const startPad = firstDay.getDay(); // 0=Sun
-  const totalCells = startPad + lastDate;
-  const rows = Math.ceil(totalCells / 7);
-
-  const todayKey = toDateKey(new Date());
-  const monthLabel = firstDay.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const { alwaysRunning, scheduled } = useMemo(
+    () => categorizeCrons(data.crons, data.jobRuns, weekDays),
+    [data.crons, data.jobRuns, weekDays]
+  );
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-zinc-100">{monthLabel}</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={goToday}
-            className="rounded-md border border-zinc-800 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-800/50 transition-colors"
-          >
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-100">Calendar</h1>
+          <p className="text-sm text-zinc-500">{formatWeekLabel(weekStart)}</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button onClick={goToday} className="rounded-md border border-zinc-700 bg-zinc-800/80 px-3 py-1.5 text-sm font-medium text-zinc-200 hover:bg-zinc-700/80 transition-colors">
+            Week
+          </button>
+          <button onClick={goToday} className="rounded-md border border-zinc-800 px-3 py-1.5 text-sm text-zinc-400 hover:bg-zinc-800/50 transition-colors">
             Today
           </button>
-          <button
-            onClick={goPrev}
-            className="rounded-md border border-zinc-800 p-1 text-zinc-400 hover:bg-zinc-800/50 transition-colors"
-          >
+          <button onClick={refresh} className="rounded-md border border-zinc-800 p-1.5 text-zinc-400 hover:bg-zinc-800/50 transition-colors">
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
+          <button onClick={goPrev} className="rounded-md border border-zinc-800 p-1.5 text-zinc-400 hover:bg-zinc-800/50 transition-colors">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button
-            onClick={goNext}
-            className="rounded-md border border-zinc-800 p-1 text-zinc-400 hover:bg-zinc-800/50 transition-colors"
-          >
+          <button onClick={goNext} className="rounded-md border border-zinc-800 p-1.5 text-zinc-400 hover:bg-zinc-800/50 transition-colors">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      {/* Grid */}
-      <div className={`rounded-lg border border-zinc-800/50 overflow-hidden ${loading ? "opacity-50" : ""}`}>
-        {/* Weekday header */}
-        <div className="grid grid-cols-7 border-b border-zinc-800/50">
-          {WEEKDAYS.map((d) => (
-            <div key={d} className="px-2 py-1.5 text-center text-xs font-medium text-zinc-500">
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* Day cells */}
-        {Array.from({ length: rows }, (_, row) => (
-          <div key={row} className="grid grid-cols-7 border-b border-zinc-800/30 last:border-b-0">
-            {Array.from({ length: 7 }, (_, col) => {
-              const cellIndex = row * 7 + col;
-              const dayNum = cellIndex - startPad + 1;
-              const isInMonth = dayNum >= 1 && dayNum <= lastDate;
-
-              if (!isInMonth) {
-                return <div key={col} className="min-h-[72px] bg-zinc-950/50" />;
-              }
-
-              const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
-              const isToday = dateKey === todayKey;
-              const isSelected = dateKey === selectedDay;
-
-              const cronCount = cronRuns.get(dateKey)?.length || 0;
-              const taskCount = tasksByDay.get(dateKey)?.length || 0;
-              const draftCount = draftsByDay.get(dateKey)?.length || 0;
-              const nlCount = newsletterByDay.get(dateKey)?.length || 0;
-              const hasContent = cronCount + taskCount + draftCount + nlCount > 0;
-
-              return (
-                <button
-                  key={col}
-                  onClick={() => setSelectedDay(isSelected ? null : dateKey)}
-                  className={`min-h-[72px] p-1.5 text-left transition-colors border-r border-zinc-800/20 last:border-r-0 ${
-                    isSelected
-                      ? "bg-zinc-800/60"
-                      : hasContent
-                        ? "hover:bg-zinc-800/40"
-                        : "hover:bg-zinc-900/50"
-                  }`}
-                >
-                  <div
-                    className={`text-xs mb-1 ${
-                      isToday
-                        ? "inline-flex h-5 w-5 items-center justify-center rounded-full bg-teal-500 text-zinc-950 font-bold"
-                        : "text-zinc-400"
-                    }`}
-                  >
-                    {dayNum}
-                  </div>
-                  {hasContent && (
-                    <div className="flex flex-wrap gap-1">
-                      {cronCount > 0 && <CountPill count={cronCount} color="bg-blue-500/80" />}
-                      {taskCount > 0 && <CountPill count={taskCount} color="bg-emerald-500/80" />}
-                      {draftCount > 0 && <CountPill count={draftCount} color="bg-purple-500/80" />}
-                      {nlCount > 0 && <CountPill count={nlCount} color="bg-orange-500/80" />}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
       {/* Legend */}
-      <div className="flex gap-4 text-xs text-zinc-500">
-        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-blue-500/80" /> Crons</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-emerald-500/80" /> Tasks</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-purple-500/80" /> Drafts</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-orange-500/80" /> Newsletter</span>
+      <div className="flex items-center gap-4 text-xs text-zinc-500">
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" /> Ran</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-red-400" /> Error</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-amber-400" /> Missed</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-zinc-600" /> Upcoming</span>
       </div>
 
-      {/* Day detail */}
-      {selectedDay && (
-        <DayDetail
-          dateKey={selectedDay}
-          cronEntries={cronRuns.get(selectedDay) || []}
-          tasks={tasksByDay.get(selectedDay) || []}
-          drafts={draftsByDay.get(selectedDay) || []}
-          newsletter={newsletterByDay.get(selectedDay) || []}
-        />
+      {/* Always Running */}
+      {alwaysRunning.length > 0 && (
+        <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="h-4 w-4 text-amber-400" />
+            <span className="text-sm font-medium text-zinc-200">Always Running</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {alwaysRunning.map((job) => (
+              <span
+                key={job.name}
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${PILL_COLORS[job.colorIdx]} bg-zinc-800/50`}
+              >
+                {job.name} &middot; {job.frequency}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
+
+      {/* Weekly columns */}
+      <div className={`grid grid-cols-7 gap-px bg-zinc-800/30 rounded-lg border border-zinc-800/50 overflow-hidden ${loading ? "opacity-50 pointer-events-none" : ""}`}>
+        {weekDays.map((dateKey) => {
+          const d = new Date(dateKey + "T12:00:00");
+          const isToday = dateKey === todayKey;
+          const events = scheduled.get(dateKey) || [];
+
+          return (
+            <div key={dateKey} className="bg-zinc-950 flex flex-col min-h-0">
+              {/* Day header */}
+              <div className={`px-3 py-2.5 border-b border-zinc-800/50 ${isToday ? "bg-zinc-900/50" : ""}`}>
+                <span className={`text-sm font-semibold ${isToday ? "text-teal-400" : "text-zinc-300"}`}>
+                  {WEEKDAYS[d.getDay()]}
+                </span>
+              </div>
+
+              {/* Event cards */}
+              <div className="flex-1 p-1.5 space-y-1.5 overflow-y-auto max-h-[calc(100vh-18rem)]">
+                {events.map((ev, i) => (
+                  <EventCard key={`${ev.jobId}-${ev.sortKey}-${i}`} event={ev} />
+                ))}
+                {events.length === 0 && (
+                  <div className="text-xs text-zinc-700 text-center py-4">—</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function CountPill({ count, color }: { count: number; color: string }) {
-  return (
-    <span className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white ${color}`}>
-      {count}
-    </span>
-  );
-}
-
-function DayDetail({
-  dateKey,
-  cronEntries,
-  tasks,
-  drafts,
-  newsletter,
-}: {
-  dateKey: string;
-  cronEntries: { job: DbCronJob; future: boolean }[];
-  tasks: DbTask[];
-  drafts: DbXDraft[];
-  newsletter: DbNewsletterArticle[];
-}) {
-  const dateLabel = new Date(dateKey + "T12:00:00").toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-
-  const isEmpty = cronEntries.length + tasks.length + drafts.length + newsletter.length === 0;
+function EventCard({ event }: { event: DayEvent }) {
+  const colorClass = CARD_COLORS[event.colorIdx];
+  const si = STATUS_INDICATOR[event.status];
 
   return (
-    <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4 space-y-4">
-      <h2 className="text-sm font-medium text-zinc-200">{dateLabel}</h2>
-
-      {isEmpty && <p className="text-sm text-zinc-500">No activity this day.</p>}
-
-      {/* Crons */}
-      {cronEntries.length > 0 && (
-        <section>
-          <h3 className="text-xs font-medium text-blue-400 mb-2">Cron Jobs ({cronEntries.length})</h3>
-          <div className="space-y-1.5">
-            {cronEntries.map(({ job, future }) => (
-              <div
-                key={job.id}
-                className={`flex items-center gap-2 text-sm ${future ? "opacity-50" : ""}`}
-              >
-                <StatusDot variant={cronStatusVariant(job.last_status)} />
-                <span className="text-zinc-200">{job.name}</span>
-                {job.agent_id && (
-                  <span className="text-xs text-zinc-500">{job.agent_id}</span>
-                )}
-                {job.last_duration_ms != null && !future && (
-                  <span className="text-xs text-zinc-500">
-                    {job.last_duration_ms < 1000
-                      ? `${job.last_duration_ms}ms`
-                      : `${(job.last_duration_ms / 1000).toFixed(1)}s`}
-                  </span>
-                )}
-                {future && <span className="text-xs text-zinc-600">scheduled</span>}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Tasks */}
-      {tasks.length > 0 && (
-        <section>
-          <h3 className="text-xs font-medium text-emerald-400 mb-2">Tasks ({tasks.length})</h3>
-          <div className="space-y-1.5">
-            {tasks.map((t) => (
-              <div key={t.id} className="flex items-center gap-2 text-sm">
-                <StatusDot variant={taskStatusVariant(t.status)} />
-                <span className="text-zinc-200">{t.title}</span>
-                <span className="text-xs text-zinc-500">{t.status}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Drafts */}
-      {drafts.length > 0 && (
-        <section>
-          <h3 className="text-xs font-medium text-purple-400 mb-2">X Drafts ({drafts.length})</h3>
-          <div className="space-y-1.5">
-            {drafts.map((d) => (
-              <div key={d.id} className="flex items-start gap-2 text-sm">
-                <StatusDot
-                  variant={d.status === "posted" ? "complete" : d.status === "approved" ? "scheduled" : "neutral"}
-                  className="mt-1"
-                />
-                <span className="text-zinc-300 line-clamp-1">{d.text}</span>
-                {d.tweet_url && (
-                  <a
-                    href={d.tweet_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 text-xs text-teal-400 hover:underline"
-                  >
-                    view
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Newsletter */}
-      {newsletter.length > 0 && (
-        <section>
-          <h3 className="text-xs font-medium text-orange-400 mb-2">Newsletter ({newsletter.length} articles)</h3>
-          <div className="space-y-1.5">
-            {newsletter.map((a) => (
-              <div key={a.id} className="flex items-center gap-2 text-sm">
-                <span className="text-zinc-300">{a.title}</span>
-                {a.category && (
-                  <span className="text-xs text-zinc-500">{a.category}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+    <div
+      className={`rounded-md bg-zinc-900/80 border px-2.5 py-2 ${si.border} ${si.opacity}`}
+      title={event.summary || undefined}
+    >
+      <div className="flex items-center gap-1.5">
+        <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${si.dot}`} />
+        <span className={`text-xs font-medium truncate ${colorClass}`}>
+          {event.name}
+        </span>
+      </div>
+      <div className="text-[10px] text-zinc-500 mt-0.5 pl-3">
+        {event.time}
+      </div>
     </div>
   );
 }

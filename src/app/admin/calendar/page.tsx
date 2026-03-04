@@ -1,38 +1,34 @@
-import {
-  fetchCronJobs,
-  fetchTasksForMonth,
-  fetchXDraftsForMonth,
-  fetchNewsletterForMonth,
-} from "@/lib/db";
+import { fetchCronJobs, fetchJobRunsForRange } from "@/lib/db";
 import { CalendarView } from "@/components/calendar-view";
 
 export const dynamic = "force-dynamic";
 
-function getMonthRange(year: number, month: number) {
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const end = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-  return { start, end };
+function getWeekRange(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const sun = new Date(d);
+  sun.setDate(d.getDate() - day);
+  const sat = new Date(sun);
+  sat.setDate(sun.getDate() + 6);
+  const fmt = (dt: Date) =>
+    `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  return { start: fmt(sun), end: fmt(sat) };
 }
 
 export default async function AdminCalendar() {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const { start, end } = getMonthRange(year, month);
+  const { start, end } = getWeekRange(now);
 
-  const [crons, tasks, drafts, newsletter] = await Promise.all([
+  const [crons, jobRuns] = await Promise.all([
     fetchCronJobs(),
-    fetchTasksForMonth(start, end),
-    fetchXDraftsForMonth(start, end),
-    fetchNewsletterForMonth(start, end),
+    fetchJobRunsForRange(start, end),
   ]);
 
   return (
     <CalendarView
-      initialData={{ crons, tasks, drafts, newsletter }}
-      initialYear={year}
-      initialMonth={month}
+      initialData={{ crons, jobRuns }}
+      initialStart={start}
     />
   );
 }

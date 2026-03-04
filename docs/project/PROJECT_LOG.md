@@ -1,5 +1,17 @@
 # Project Log
 
+## 2026-03-04 (session 18)
+
+- Refocused `/admin/calendar` as an **agent accountability view** — removed tasks, drafts, newsletter (those belong on their own pages). Calendar now exclusively tracks scheduled cron jobs and their execution status.
+- Seeded `cron_jobs` with 13 known agent schedules from STANDING-ORDERS.md (Moltzart, Sigmund, Pica, Scout, system jobs). X Draft Review seeded as disabled.
+- Created `job_runs` table (id, job_id FK, agent_id, started_at, completed_at, status, summary) with indexes on started_at and job_id. Agents will POST execution reports here.
+- Added `POST /api/ingest/crons/run` endpoint — agents report job starts/completions. Supports both creating new runs and updating existing ones (via `run_id`).
+- Added `DbJobRun` interface and DB functions: `insertJobRun`, `updateJobRun`, `fetchJobRunsForRange`.
+- `CalendarView` now cross-references projected cron times with actual `job_runs` entries. Each event card shows status: green dot (ran), red (error), amber (missed — the key accountability signal), dim (upcoming), blue pulse (running).
+- High-frequency jobs (heartbeat every 15min, sync every 30min, auto-push hourly) correctly routed to "Always Running" pills section.
+- **Decision:** Run matching is date-based (job_id + date key), not exact-time. A job with a run anywhere in the same day counts as matched. This is intentional — agents may run slightly off-schedule.
+- **Next:** Agents need to start calling `POST /api/ingest/crons/run` when their scheduled jobs execute. Until then, all past events show as "missed."
+
 ## 2026-03-04 (session 17)
 
 - Built `/admin/calendar` page — monthly grid consolidating cron jobs, tasks, X drafts, and newsletter articles into a single view.
