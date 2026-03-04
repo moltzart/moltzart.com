@@ -1686,6 +1686,128 @@ async function ensureUniqueProjectSlug(baseSlug: string, excludeId?: string): Pr
   }
 }
 
+// --- Cron Jobs ---
+
+export interface DbCronJob {
+  id: string;
+  name: string;
+  agent_id: string | null;
+  enabled: boolean;
+  schedule_expr: string;
+  schedule_tz: string;
+  last_run_at: string | null;
+  last_status: string | null;
+  last_duration_ms: number | null;
+  next_run_at: string | null;
+  consecutive_errors: number;
+  synced_at: string;
+}
+
+export async function upsertCronJobs(
+  jobs: {
+    id: string;
+    name: string;
+    agent_id?: string;
+    enabled?: boolean;
+    schedule_expr: string;
+    schedule_tz?: string;
+    last_run_at?: string | null;
+    last_status?: string | null;
+    last_duration_ms?: number | null;
+    next_run_at?: string | null;
+    consecutive_errors?: number;
+  }[]
+): Promise<number> {
+  let upserted = 0;
+  for (const j of jobs) {
+    await sql()`
+      INSERT INTO cron_jobs (id, name, agent_id, enabled, schedule_expr, schedule_tz, last_run_at, last_status, last_duration_ms, next_run_at, consecutive_errors, synced_at)
+      VALUES (
+        ${j.id}, ${j.name}, ${j.agent_id || null}, ${j.enabled !== false},
+        ${j.schedule_expr}, ${j.schedule_tz || "America/New_York"},
+        ${j.last_run_at || null}::timestamptz, ${j.last_status || null},
+        ${j.last_duration_ms ?? null}::int, ${j.next_run_at || null}::timestamptz,
+        ${j.consecutive_errors || 0}, now()
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        agent_id = EXCLUDED.agent_id,
+        enabled = EXCLUDED.enabled,
+        schedule_expr = EXCLUDED.schedule_expr,
+        schedule_tz = EXCLUDED.schedule_tz,
+        last_run_at = EXCLUDED.last_run_at,
+        last_status = EXCLUDED.last_status,
+        last_duration_ms = EXCLUDED.last_duration_ms,
+        next_run_at = EXCLUDED.next_run_at,
+        consecutive_errors = EXCLUDED.consecutive_errors,
+        synced_at = EXCLUDED.synced_at
+    `;
+    upserted++;
+  }
+  return upserted;
+}
+
+export async function fetchCronJobs(): Promise<DbCronJob[]> {
+  const rows = await sql()`SELECT * FROM cron_jobs ORDER BY name`;
+  return rows.map((r) => ({
+    id: String(r.id),
+    name: String(r.name),
+    agent_id: r.agent_id ? String(r.agent_id) : null,
+    enabled: Boolean(r.enabled),
+    schedule_expr: String(r.schedule_expr),
+    schedule_tz: String(r.schedule_tz),
+    last_run_at: r.last_run_at ? toDateTimeStr(r.last_run_at) : null,
+    last_status: r.last_status ? String(r.last_status) : null,
+    last_duration_ms: r.last_duration_ms != null ? toNumberOr(r.last_duration_ms, 0) : null,
+    next_run_at: r.next_run_at ? toDateTimeStr(r.next_run_at) : null,
+    consecutive_errors: toNumberOr(r.consecutive_errors, 0),
+    synced_at: toDateTimeStr(r.synced_at),
+  })) as DbCronJob[];
+}
+
+// --- Month-range queries ---
+
+export async function fetchTasksForMonth(start: string, end: string): Promise<DbTask[]> {
+  const rows = await sql()`
+    SELECT * FROM tasks
+    WHERE (due_date BETWEEN ${start}::date AND ${end}::date)
+       OR (due_date IS NULL AND created_at::date BETWEEN ${start}::date AND ${end}::date)
+    ORDER BY COALESCE(due_date::date, created_at::date), created_at
+  `;
+  return rows.map((r) => ({
+    id: String(r.id),
+    title: String(r.title),
+    detail: r.detail ? String(r.detail) : null,
+    status: String(r.status),
+    priority: String(r.priority),
+    effort: r.effort ? String(r.effort) : null,
+    due_date: r.due_date ? toDateStr(r.due_date) : null,
+    blocked_by: r.blocked_by ? String(r.blocked_by) : null,
+    board_order: toNumberOr(r.board_order, 0),
+    created_at: toDateTimeStr(r.created_at),
+    updated_at: toDateTimeStr(r.updated_at),
+  })) as DbTask[];
+}
+
+export async function fetchXDraftsForMonth(start: string, end: string): Promise<DbXDraft[]> {
+  const rows = await sql()`
+    SELECT * FROM x_drafts
+    WHERE created_at::date BETWEEN ${start}::date AND ${end}::date
+       OR (posted_at IS NOT NULL AND posted_at::date BETWEEN ${start}::date AND ${end}::date)
+    ORDER BY created_at
+  `;
+  return rows as unknown as DbXDraft[];
+}
+
+export async function fetchNewsletterForMonth(start: string, end: string): Promise<DbNewsletterArticle[]> {
+  const rows = await sql()`
+    SELECT * FROM newsletter_articles
+    WHERE digest_date BETWEEN ${start}::date AND ${end}::date
+    ORDER BY digest_date, created_at
+  `;
+  return rows.map((r) => ({ ...r, digest_date: toDateStr(r.digest_date) })) as unknown as DbNewsletterArticle[];
+}
+
 // --- Shared helpers ---
 
 function formatDayLabel(dateStr: string): string {

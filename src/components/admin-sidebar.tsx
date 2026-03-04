@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Briefcase, CheckSquare, FileSearch, LayoutDashboard, LogOut, Newspaper, PenLine } from "lucide-react";
+import { Briefcase, CalendarDays, CheckSquare, FileSearch, LayoutDashboard, LogOut, Newspaper, PenLine } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -42,6 +42,7 @@ const navGroups = [
     items: [
       { title: "Tasks", href: "/admin/tasks", icon: CheckSquare },
       { title: "Drafts", href: "/admin/drafts", icon: PenLine },
+      { title: "Calendar", href: "/admin/calendar", icon: CalendarDays },
     ],
   },
 ];
