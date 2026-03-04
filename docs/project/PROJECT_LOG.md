@@ -1,5 +1,17 @@
 # Project Log
 
+## 2026-03-04 (session 17)
+
+- Built `/admin/calendar` page — monthly grid consolidating cron jobs, tasks, X drafts, and newsletter articles into a single view.
+- Created `cron_jobs` table via Neon MCP (id, name, agent_id, enabled, schedule_expr, schedule_tz, last_run_at, last_status, last_duration_ms, next_run_at, consecutive_errors, synced_at).
+- Added ingest endpoint `POST/GET /api/ingest/crons` for agents to sync cron job state.
+- Added month-range DB queries: `fetchTasksForMonth`, `fetchXDraftsForMonth`, `fetchNewsletterForMonth`.
+- `CalendarView` client component: monthly grid with colored count pills per day (blue=crons, green=tasks, purple=drafts, orange=newsletter), prev/next/today navigation, click-to-expand day detail panel.
+- Cron projection uses `cron-parser` client-side to expand schedule expressions onto visible month days. Future runs shown at reduced opacity.
+- Admin API route `GET /api/admin/calendar?year=&month=` for month navigation (cookie auth).
+- Added Calendar entry to sidebar Operations group with `CalendarDays` icon.
+- **Decision:** Cron runs are projected client-side from `schedule_expr` rather than stored per-execution. This means the calendar shows scheduled times, not actual run times — but `last_run_at`/`last_status` on the job provides the most recent actual result.
+
 ## 2026-03-03 (session 16)
 
 - Applied 3 pending migrations via Neon MCP: `projects` table (replacing `product_ideas` as primary org unit), `research_artifacts` table, tasks board workflow (`backlog/todo/in_progress/done` + `board_order`).
