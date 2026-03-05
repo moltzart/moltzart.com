@@ -1,5 +1,18 @@
 # Project Log
 
+## 2026-03-05 (session 20)
+
+- Comprehensive styleguide overhaul: 5-page reference at `/admin/styleguide` (overview, foundations, components, patterns, motion) with interactive demos, live component showcases, and Framer Motion presets. Deleted old `/styleguide` route.
+- Extracted `PanelHeader` sub-component from `panel.tsx` — standardizes the icon + title + count + action link pattern used in ~9 places. Adopted in 6 admin pages.
+- CSS token fixes: `.type-body-sm` differentiated to `text-xs`, all `divide-zinc-800` normalized to `/30`, `prose-sm` and `[&_hr+p]:text-zinc-500` added to `.doc-markdown` CSS, MarkdownRenderer switched from 2000-char inline className to CSS classes.
+- `active:scale-[0.98]` added to shadcn Button CVA base (with `disabled:active:scale-100`). All Button usages get press feedback automatically.
+- Inlined `GRAINIENT_COLORS` into `page.tsx`, deleted `design-tokens.ts`.
+- **Decision:** `PanelHeader` assumes teal icon color (`text-teal-400`). The products-view and projects-view headers use status-dependent icon colors, so they keep manual headers. This is intentional — PanelHeader serves the ~80% case.
+- **Decision:** Styleguide pages excluded from both `check-spacing-grid.mjs` and `check-ui-guidelines.mjs` — they document the full design system including values the lint rules flag in normal code (fractional spacing, off-scale steps shown as data labels).
+- **Learned:** The custom `lint:spacing` script matches class-like patterns inside JS string literals (data arrays), not just className props. File-level excludes are the cleanest fix for documentation pages.
+- **Watch:** MarkdownRenderer now applies `doc-markdown doc-markdown-compact` by default. Previously the inline classes matched `doc-markdown-compact` sizing but not exactly `doc-markdown` (it had `prose-sm` which `doc-markdown` didn't). Added `prose-sm` to `.doc-markdown-compact` in CSS to preserve the same rendering.
+- **Next:** Consider adding `StatusTag` showcase to components page (skipped because it requires `ProjectStatus` type import chain). WeekSelector upgrade to shadcn Select was deferred per plan (2c, lower priority).
+
 ## 2026-03-04 (session 19)
 
 - Restructured `/admin/research/[id]` layout: breadcrumb gets a 1px divider below it, badges (domain tag + project link) moved to separate positions — project is now a breadcrumb segment, domain tag sits next to the date below the title. Removed Panel wrapper from markdown content, replaced with a vertical `border-r` divider between content and TOC columns.
