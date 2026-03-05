@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import type { DbCronJob, DbJobRun } from "@/lib/db";
 import { PageHeader } from "@/components/admin/page-header";
+import { Panel } from "@/components/admin/panel";
 
 // --- Types ---
 
@@ -24,38 +25,9 @@ interface DayEvent {
   jobId: string;
   time: string;
   sortKey: string;
-  colorIdx: number;
   status: RunStatus;
   summary?: string;
 }
-
-// --- Color palette for event cards ---
-
-const CARD_COLORS = [
-  "text-emerald-400",
-  "text-amber-400",
-  "text-blue-400",
-  "text-rose-400",
-  "text-purple-400",
-  "text-teal-400",
-  "text-orange-400",
-  "text-cyan-400",
-  "text-pink-400",
-  "text-lime-400",
-];
-
-const PILL_COLORS = [
-  "text-emerald-400/70 border-emerald-400/20",
-  "text-amber-400/70 border-amber-400/20",
-  "text-blue-400/70 border-blue-400/20",
-  "text-rose-400/70 border-rose-400/20",
-  "text-purple-400/70 border-purple-400/20",
-  "text-teal-400/70 border-teal-400/20",
-  "text-orange-400/70 border-orange-400/20",
-  "text-cyan-400/70 border-cyan-400/20",
-  "text-pink-400/70 border-pink-400/20",
-  "text-lime-400/70 border-lime-400/20",
-];
 
 // --- Status indicator styles ---
 
@@ -83,28 +55,6 @@ function addDays(dateStr: string, n: number): string {
 
 function getWeekDays(startDate: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
-}
-
-/** Get Monday of the week containing dateStr */
-function getWeekStart(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00");
-  const day = d.getDay();
-  // Monday=0 offset: Sun(0)->-6, Mon(1)->0, Tue(2)->-1, ...
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return fmtDate(d);
-}
-
-function formatTime(d: Date): string {
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return m === 0 ? `${h12}:00 ${ampm}` : `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
-}
-
-function formatTimeSortKey(d: Date): string {
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function formatWeekLabel(startDate: string): string {
@@ -181,7 +131,6 @@ function expandCron(expr: string, weekDays: string[]): CronRun[] {
 interface AlwaysRunningJob {
   name: string;
   frequency: string;
-  colorIdx: number;
 }
 
 function categorizeCrons(
@@ -204,21 +153,15 @@ function categorizeCrons(
     runIndex.get(key)!.push(run);
   }
 
-  // Build stable color map
-  const colorMap = new Map<string, number>();
-  const sortedNames = [...new Set(crons.map((j) => j.name))].sort();
-  sortedNames.forEach((name, i) => colorMap.set(name, i % CARD_COLORS.length));
-
   for (const job of crons) {
     if (!job.enabled) continue;
-    const colorIdx = colorMap.get(job.name) ?? 0;
 
     const weekRuns = expandCron(job.schedule_expr, weekDays);
 
     if (weekRuns.length > 100) {
       const perDay = Math.round(weekRuns.length / 7);
       const freq = perDay >= 24 ? `Every ${Math.round((24 * 60) / perDay)} min` : `${perDay}x daily`;
-      alwaysRunning.push({ name: job.name, frequency: freq, colorIdx });
+      alwaysRunning.push({ name: job.name, frequency: freq });
       continue;
     }
 
@@ -251,7 +194,6 @@ function categorizeCrons(
         jobId: job.id,
         time: formatHM(run.hour, run.minute),
         sortKey: sortKeyHM(run.hour, run.minute),
-        colorIdx,
         status,
         summary,
       });
@@ -295,17 +237,29 @@ export function CalendarView({ initialData, initialStart }: CalendarViewProps) {
     () => categorizeCrons(data.crons, data.jobRuns, weekDays),
     [data.crons, data.jobRuns, weekDays]
   );
+  const iconButtonClass =
+    "inline-flex size-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-800/40 hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none";
 
   return (
     <div className="space-y-4">
       <PageHeader title="Calendar" subtitle={formatWeekLabel(weekStart)}>
-        <button onClick={refresh} className="rounded-md border border-zinc-800 p-1.5 text-zinc-400 hover:bg-zinc-800/50 transition-colors">
+        <button
+          onClick={refresh}
+          disabled={loading}
+          className={iconButtonClass}
+        >
           <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
         </button>
-        <button onClick={goPrev} className="rounded-md border border-zinc-800 p-1.5 text-zinc-400 hover:bg-zinc-800/50 transition-colors">
+        <button
+          onClick={goPrev}
+          className={iconButtonClass}
+        >
           <ChevronLeft className="size-4" />
         </button>
-        <button onClick={goNext} className="rounded-md border border-zinc-800 p-1.5 text-zinc-400 hover:bg-zinc-800/50 transition-colors">
+        <button
+          onClick={goNext}
+          className={iconButtonClass}
+        >
           <ChevronRight className="size-4" />
         </button>
       </PageHeader>
@@ -314,12 +268,12 @@ export function CalendarView({ initialData, initialStart }: CalendarViewProps) {
       <div className="flex items-center justify-between gap-4">
         {alwaysRunning.length > 0 && (
           <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase tracking-wider text-zinc-600 shrink-0">Always on</span>
-            <div className="flex flex-wrap gap-1.5">
+            <span className="type-badge text-zinc-600 shrink-0">Always On</span>
+            <div className="flex flex-wrap gap-2">
               {alwaysRunning.map((job) => (
                 <span
                   key={job.name}
-                  className="inline-flex items-center rounded-full border border-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-500 bg-zinc-900/50"
+                  className="inline-flex items-center rounded-full border border-zinc-800 px-2 py-1 type-badge text-zinc-500 bg-zinc-900/50"
                 >
                   {job.name} · {job.frequency}
                 </span>
@@ -327,17 +281,18 @@ export function CalendarView({ initialData, initialStart }: CalendarViewProps) {
             </div>
           </div>
         )}
-        <div className="flex items-center gap-4 text-xs text-zinc-500 shrink-0 ml-auto">
-          <span className="flex items-center gap-1.5"><span className="inline-block size-2 rounded-full bg-emerald-400" /> Ran</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block size-2 rounded-full bg-red-400" /> Error</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block size-2 rounded-full bg-amber-400" /> Missed</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block size-2 rounded-full bg-zinc-600" /> Upcoming</span>
+        <div className="ml-auto flex shrink-0 items-center gap-4 type-body-sm text-zinc-500">
+          <span className="flex items-center gap-2"><span className="inline-block size-2 rounded-full bg-emerald-400" /> Ran</span>
+          <span className="flex items-center gap-2"><span className="inline-block size-2 rounded-full bg-red-400" /> Error</span>
+          <span className="flex items-center gap-2"><span className="inline-block size-2 rounded-full bg-amber-400" /> Missed</span>
+          <span className="flex items-center gap-2"><span className="inline-block size-2 rounded-full bg-zinc-600" /> Upcoming</span>
         </div>
       </div>
 
       {/* Weekly columns */}
-      <div className={`rounded-lg border border-zinc-800/50 overflow-hidden ${loading ? "opacity-50 pointer-events-none" : ""}`}>
-        <div className="grid grid-cols-7 gap-px bg-zinc-800/30">
+      <Panel className={`flex flex-col h-[calc(100svh-10rem)] overflow-hidden ${loading ? "opacity-50 pointer-events-none" : ""}`}>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="grid grid-cols-7 gap-px bg-zinc-800/30 h-full">
           {weekDays.map((dateKey, idx) => {
             const d = new Date(dateKey + "T12:00:00");
             const isToday = dateKey === todayKey;
@@ -345,9 +300,9 @@ export function CalendarView({ initialData, initialStart }: CalendarViewProps) {
             const events = scheduled.get(dateKey) || [];
 
             return (
-              <div key={dateKey} className={`bg-zinc-950 flex flex-col min-h-0 ${isPast ? "opacity-50" : ""}`}>
+              <div key={dateKey} className={`bg-zinc-950/40 flex flex-col min-h-0 ${isPast ? "opacity-50" : ""}`}>
                 {/* Day header */}
-                <div className={`px-3 py-2.5 border-b border-zinc-800/50 flex items-center justify-between ${isToday ? "bg-zinc-900/50" : ""}`}>
+                <div className={`px-3 py-2 border-b border-zinc-800/40 flex items-center justify-between ${isToday ? "bg-zinc-900/50" : ""}`}>
                   <span className={`text-sm font-semibold ${isToday ? "text-teal-400" : "text-zinc-300"}`}>
                     {WEEKDAYS[idx]}
                   </span>
@@ -357,41 +312,39 @@ export function CalendarView({ initialData, initialStart }: CalendarViewProps) {
                 </div>
 
                 {/* Event cards */}
-                <div className="flex-1 p-1.5 space-y-1.5 overflow-y-auto max-h-[calc(100vh-20rem)]">
+                <div className="flex-1 p-2 space-y-1 min-h-0 overflow-y-auto">
                   {events.map((ev, i) => (
                     <EventCard key={`${ev.jobId}-${ev.sortKey}-${i}`} event={ev} />
                   ))}
                   {events.length === 0 && (
-                    <div className="text-xs text-zinc-700 text-center py-4">—</div>
+                    <div className="type-badge text-zinc-700 text-center py-4">—</div>
                   )}
                 </div>
               </div>
             );
           })}
+          </div>
         </div>
-
-
-      </div>
+      </Panel>
     </div>
   );
 }
 
 function EventCard({ event }: { event: DayEvent }) {
-  const colorClass = CARD_COLORS[event.colorIdx];
   const si = STATUS_INDICATOR[event.status];
 
   return (
     <div
-      className={`rounded-md bg-zinc-900/80 border px-2.5 py-2 ${si.border}`}
+      className={`rounded-lg bg-zinc-900/30 border p-2 ${si.border}`}
       title={event.summary || undefined}
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         <span className={`inline-block size-1.5 rounded-full shrink-0 ${si.dot}`} />
-        <span className={`text-xs font-medium truncate ${colorClass}`}>
+        <span className="type-body-sm font-medium truncate text-zinc-200">
           {event.name}
         </span>
       </div>
-      <div className="text-[10px] text-zinc-500 mt-0.5 pl-3">
+      <div className="type-badge text-zinc-500 mt-1 pl-3">
         {event.time}
       </div>
     </div>

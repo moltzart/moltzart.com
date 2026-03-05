@@ -252,14 +252,14 @@ export default function Tasks() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 type-body-sm"
+            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-3 text-zinc-100 placeholder-zinc-600 type-body-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60"
             autoFocus
           />
           {error && <p className="text-red-400 type-body-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] rounded-lg type-body-sm font-medium transition-all disabled:opacity-50 disabled:active:scale-100"
+            className="w-full rounded-lg bg-zinc-800 py-3 type-body-sm font-medium transition-colors hover:bg-zinc-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60 disabled:opacity-50 disabled:active:scale-100"
           >
             {loading ? "Loading..." : "View Tasks"}
           </button>
@@ -285,7 +285,7 @@ export default function Tasks() {
             <button
               onClick={() => fetchTasks(password)}
               disabled={loading}
-              className="text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50"
+              className="inline-flex size-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-800/40 hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
               title="Refresh"
             >
               <RefreshCw

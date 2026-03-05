@@ -33,10 +33,10 @@ export function ResearchToc({ headings }: ResearchTocProps) {
 
   return (
     <nav className="sticky top-6">
-      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">
+      <p className="type-label text-zinc-500 mb-3">
         On this page
       </p>
-      <ul className="space-y-0.5">
+      <ul className="space-y-1">
         {headings.map((heading) => (
           <li key={heading.id}>
             <a
@@ -47,7 +47,7 @@ export function ResearchToc({ headings }: ResearchTocProps) {
                   .getElementById(heading.id)
                   ?.scrollIntoView({ behavior: "smooth" });
               }}
-              className={`block text-sm pl-3 py-1 border-l-2 transition-colors ${
+              className={`block type-body-sm pl-3 py-1 border-l-2 transition-colors ${
                 activeId === heading.id
                   ? "text-teal-400 border-l-teal-400"
                   : "text-zinc-500 border-l-transparent hover:text-zinc-300"

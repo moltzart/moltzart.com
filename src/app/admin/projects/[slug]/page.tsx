@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, FileSearch, FolderKanban, Lightbulb } from "lucide-react";
 import { fetchProjectBySlug } from "@/lib/db";
-import { Panel } from "@/components/admin/panel";
+import { Panel, PanelHeader } from "@/components/admin/panel";
 import { EmptyState } from "@/components/admin/empty-state";
 import { MarkdownRenderer } from "@/components/admin/markdown-renderer";
 import { ProductResearchView } from "@/components/product-research-view";
@@ -54,7 +54,7 @@ export default async function ProjectDetailPage({ params }: Props) {
       {hasProjectOverview && (
         <Panel className="px-4 py-4">
           <div className="flex items-center gap-2 mb-3">
-            <FolderKanban size={14} className="text-teal-500" />
+            <FolderKanban size={14} className="text-teal-400" />
             <span className="type-body-sm font-medium text-zinc-200">Project overview</span>
           </div>
           <MarkdownRenderer content={project.summary || ""} className="doc-markdown-compact doc-markdown-subtle" />
@@ -62,20 +62,19 @@ export default async function ProjectDetailPage({ params }: Props) {
       )}
 
       <Panel className="flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
-          <div className="flex items-center gap-2">
-            <FileSearch size={14} className="text-teal-500" />
-            <span className="type-body-sm font-medium text-zinc-200">Research artifacts</span>
-          </div>
-          <span className="type-body-sm text-zinc-600">{artifacts.length} artifacts</span>
-        </div>
+        <PanelHeader
+          icon={FileSearch}
+          title="Research artifacts"
+          count={artifacts.length}
+          countLabel="artifacts"
+        />
 
         {artifacts.length === 0 ? (
           <div className="px-4 py-8">
             <EmptyState icon={FileSearch} message="No research artifacts attached to this project." />
           </div>
         ) : (
-          <div className="divide-y divide-zinc-800/20">
+          <div className="divide-y divide-zinc-800/30">
             {artifacts.map((artifact) => (
               <Link
                 key={artifact.id}
@@ -102,20 +101,13 @@ export default async function ProjectDetailPage({ params }: Props) {
 
       {linkedProduct && (
         <Panel className="flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
-            <div className="flex items-center gap-2">
-              <Lightbulb size={14} className="text-teal-500" />
-              <span className="type-body-sm font-medium text-zinc-200">Product details</span>
-            </div>
-            <Link
-              href={`/admin/products/${linkedProduct.slug}`}
-              className="type-body-sm text-zinc-500 hover:text-teal-400 transition-colors"
-            >
-              Open product
-            </Link>
-          </div>
+          <PanelHeader
+            icon={Lightbulb}
+            title="Product details"
+            action={{ label: "Open product", href: `/admin/products/${linkedProduct.slug}` }}
+          />
 
-          <div className="divide-y divide-zinc-800/20">
+          <div className="divide-y divide-zinc-800/30">
             {linkedProduct.summary && (
               <section className="px-4 py-4">
                 <p className="type-body-sm font-medium text-zinc-200">Opportunity overview</p>

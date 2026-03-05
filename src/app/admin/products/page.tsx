@@ -13,10 +13,10 @@ export default async function AdminProductsPage() {
       <Panel>
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Lightbulb size={14} className="text-teal-500" />
+            <Lightbulb size={14} className="text-teal-400" />
             <span className="type-body-sm font-medium text-zinc-200">Products</span>
           </div>
-          <span className="type-body-sm text-zinc-600">{products.length} ideas</span>
+          <span className="type-body-sm text-zinc-500">{products.length} ideas</span>
         </div>
       </Panel>
 

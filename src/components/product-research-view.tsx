@@ -1,6 +1,6 @@
 import { ChevronRight, ExternalLink, FileSearch } from "lucide-react";
 import type { DbProductResearchItem } from "@/lib/db";
-import { Panel } from "@/components/admin/panel";
+import { Panel, PanelHeader } from "@/components/admin/panel";
 import { EmptyState } from "@/components/admin/empty-state";
 import { MarkdownRenderer } from "@/components/admin/markdown-renderer";
 import {
@@ -75,15 +75,13 @@ export function ProductResearchView({ research }: { research: DbProductResearchI
 
   return (
     <Panel className="flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
-        <div className="flex items-center gap-2">
-          <FileSearch size={14} className="text-teal-500" />
-          <span className="type-body-sm font-medium text-zinc-200">Idea workspace</span>
-        </div>
-        <span className="type-body-sm text-zinc-600">{displayResearch.length} items</span>
-      </div>
+      <PanelHeader
+        icon={FileSearch}
+        title="Idea workspace"
+        count={displayResearch.length}
+      />
 
-      <div className="divide-y divide-zinc-800/20">
+      <div className="divide-y divide-zinc-800/30">
         {sections.map((section, index) => (
           <details key={section.id} className="group" open={index === 0}>
             <summary className="list-none cursor-pointer px-4 py-3 hover:bg-zinc-800/20 transition-colors [&::-webkit-details-marker]:hidden">
@@ -104,8 +102,8 @@ export function ProductResearchView({ research }: { research: DbProductResearchI
               </div>
             </summary>
 
-            <div className="border-t border-zinc-800/20">
-              <div className="divide-y divide-zinc-800/20">
+            <div className="border-t border-zinc-800/30">
+              <div className="divide-y divide-zinc-800/30">
                 {section.items.map((item) => {
                   const isLongFormDoc = isLongFormProductDocSectionTitle(item.title);
                   const showSourceLink = Boolean(item.source_url) && !isLongFormDoc;
@@ -124,7 +122,7 @@ export function ProductResearchView({ research }: { research: DbProductResearchI
                             href={item.source_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 type-body-sm text-teal-500 hover:text-teal-400 transition-colors shrink-0"
+                            className="inline-flex items-center gap-1 type-body-sm text-teal-400 hover:text-teal-400 transition-colors shrink-0"
                           >
                             <ExternalLink size={12} />
                             <span>Reference link</span>

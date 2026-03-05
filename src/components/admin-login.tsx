@@ -47,14 +47,14 @@ export function AdminLogin() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg type-body-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600"
+          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-3 type-body-sm text-zinc-100 placeholder-zinc-600 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60"
           autoFocus
         />
         {error && <p className="type-body-sm text-red-400">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] rounded-lg type-body-sm font-medium transition-all disabled:opacity-50 disabled:active:scale-100"
+          className="w-full rounded-lg bg-zinc-800 py-3 type-body-sm font-medium transition-colors hover:bg-zinc-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60 disabled:opacity-50 disabled:active:scale-100"
         >
           {loading ? "Loading..." : "Sign In"}
         </button>

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { ExternalLink, FileSearch } from "lucide-react";
 import { DomainTag } from "@/components/admin/tag-badge";
 import { fetchProjectById, fetchResearchArtifactById } from "@/lib/db";
-import { Panel } from "@/components/admin/panel";
+import { Panel, PanelHeader } from "@/components/admin/panel";
 import { MarkdownRenderer } from "@/components/admin/markdown-renderer";
 import { extractHeadings } from "@/lib/research-headings";
 import { ResearchToc } from "@/components/admin/research-toc";
@@ -73,14 +73,13 @@ export default async function AdminResearchDetailPage({ params }: Props) {
 
         {sourceLinks.length > 0 && (
           <Panel className="flex flex-col mt-4">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
-              <div className="flex items-center gap-2">
-                <FileSearch size={14} className="text-teal-500" />
-                <span className="type-body-sm font-medium text-zinc-200">Source links</span>
-              </div>
-              <span className="type-body-sm text-zinc-600">{sourceLinks.length} links</span>
-            </div>
-            <div className="divide-y divide-zinc-800/20">
+            <PanelHeader
+              icon={FileSearch}
+              title="Source links"
+              count={sourceLinks.length}
+              countLabel="links"
+            />
+            <div className="divide-y divide-zinc-800/30">
               {sourceLinks.map((item) => (
                 <a
                   key={`${item.url}-${item.label}`}
@@ -90,7 +89,7 @@ export default async function AdminResearchDetailPage({ params }: Props) {
                   className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors"
                 >
                   <span className="type-body-sm text-zinc-300 truncate">{item.label}</span>
-                  <ExternalLink size={12} className="text-teal-500 shrink-0" />
+                  <ExternalLink size={12} className="text-teal-400 shrink-0" />
                 </a>
               ))}
             </div>

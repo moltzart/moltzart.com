@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowUpRight, Newspaper } from "lucide-react";
+import { Newspaper } from "lucide-react";
 import { EmptyState } from "@/components/admin/empty-state";
-import { Panel } from "@/components/admin/panel";
+import { Panel, PanelHeader } from "@/components/admin/panel";
 import { PillarTag } from "@/components/admin/tag-badge";
 import { getWeekMonday } from "@/lib/newsletter-weeks";
 import type { NewsletterArticle } from "@/lib/db";
@@ -15,27 +15,20 @@ export function NewsletterHighlights({ articles, date }: NewsletterHighlightsPro
   const weekHref = date ? `/admin/newsletter/${getWeekMonday(date)}` : "/admin/newsletter";
   return (
     <Panel className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
-        <div className="flex items-center gap-2">
-          <Newspaper size={14} className="text-teal-500" />
-          <span className="type-body-sm font-medium text-zinc-200">Newsletter Picks</span>
-          {date && <span className="type-body-sm text-zinc-600">{date}</span>}
-        </div>
-        <Link
-          href="/admin/newsletter"
-          className="type-body-sm text-zinc-500 hover:text-teal-400 transition-colors flex items-center gap-1"
-        >
-          View all <ArrowUpRight size={10} />
-        </Link>
-      </div>
+      <PanelHeader
+        icon={Newspaper}
+        title="Newsletter Picks"
+        action={{ label: "View all", href: "/admin/newsletter" }}
+      >
+        {date && <span className="type-body-sm text-zinc-500">{date}</span>}
+      </PanelHeader>
 
       {articles.length === 0 ? (
         <div className="flex-1 flex items-center justify-center py-8">
           <EmptyState icon={Newspaper} message="No picks yet." />
         </div>
       ) : (
-        <div className="divide-y divide-zinc-800/40">
+        <div className="divide-y divide-zinc-800/30">
           {articles.map((article) => (
             <Link
               key={article.id}

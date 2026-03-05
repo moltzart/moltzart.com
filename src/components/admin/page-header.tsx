@@ -48,8 +48,8 @@ export function PageHeader({ title, subtitle, breadcrumbs, children }: PageHeade
       )}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-100">{title}</h1>
-          {subtitle && <p className="text-sm text-zinc-500">{subtitle}</p>}
+          <h1 className="type-h3 text-zinc-100">{title}</h1>
+          {subtitle && <p className="type-body-sm text-zinc-500">{subtitle}</p>}
         </div>
         {children && <div className="flex items-center gap-3">{children}</div>}
       </div>

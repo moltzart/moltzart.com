@@ -56,9 +56,9 @@ export function DraftsView({ days: initialDays }: { days: DraftDay[] }) {
               className="flex items-center justify-between px-4 py-3 w-full text-left hover:bg-zinc-800/20 transition-colors rounded-lg"
             >
               <div className="flex items-center gap-2">
-                <PenLine size={14} className="text-teal-500" />
+                <PenLine size={14} className="text-teal-400" />
                 <span className="type-body-sm font-medium text-zinc-200">{day.label}</span>
-                <span className="type-body-sm text-zinc-600">{day.drafts.length} drafts</span>
+                <span className="type-body-sm text-zinc-500">{day.drafts.length} drafts</span>
               </div>
               {isOpen
                 ? <ChevronDown size={14} className="text-zinc-600" />
@@ -67,7 +67,7 @@ export function DraftsView({ days: initialDays }: { days: DraftDay[] }) {
             </button>
 
             {isOpen && (
-              <div className="border-t border-zinc-800/30 divide-y divide-zinc-800/20">
+              <div className="border-t border-zinc-800/30 divide-y divide-zinc-800/30">
                 {day.drafts.map((draft) => (
                   <DraftRow
                     key={draft.id}
@@ -103,7 +103,7 @@ function DraftRow({ draft, onDelete }: { draft: DbXDraft; onDelete: () => void }
                 href={draft.tweet_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 type-body-sm text-teal-500 hover:text-teal-400 transition-colors"
+                className="inline-flex items-center gap-1 type-body-sm text-teal-400 hover:text-teal-400 transition-colors"
               >
                 <ExternalLink size={10} />
                 <span>view on X</span>

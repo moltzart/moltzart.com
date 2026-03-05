@@ -166,7 +166,7 @@ function TaskCard({
         if (canOpenDetail) onOpenDetail(task.id);
       }}
       tabIndex={0}
-      className={`group rounded-lg border border-zinc-800/60 bg-zinc-900/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60 ${
+      className={`group rounded-lg border border-zinc-800/60 bg-zinc-900/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60 ${
         "p-2"
       } ${
         saving ? "opacity-60" : "cursor-grab active:cursor-grabbing"
@@ -212,7 +212,7 @@ function DropSlot({
 }) {
   return (
     <div
-      className={`rounded transition-all ${active ? "h-4 bg-teal-500/20 border border-teal-500/40" : "h-1"}`}
+      className={`rounded transition-[height,background-color,border-color] duration-200 ${active ? "h-4 bg-teal-400/20 border border-teal-400/40" : "h-1"}`}
       onDragOver={onDragOver}
       onDrop={onDrop}
     />

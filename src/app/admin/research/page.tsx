@@ -91,7 +91,7 @@ export default async function AdminResearchPage() {
               count={group.artifacts.length}
               isUnassigned={group.projectId === null}
             >
-              <div className="divide-y divide-zinc-800/20">
+              <div className="divide-y divide-zinc-800/30">
                 {group.artifacts.map((artifact) => (
                   <Link
                     key={artifact.id}

@@ -7,6 +7,7 @@ const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, "src");
 const ALLOWED = new Set(["0", "1", "2", "3", "4", "5", "6", "8", "12", "16"]);
 const EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".css", ".mdx"]);
+const FILE_EXCLUDES = [/^src\/app\/admin\/styleguide\//];
 
 const spacingPrefix =
   "(?:p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|space-x|space-y)";
@@ -31,6 +32,7 @@ function walk(dir) {
 
 function checkFile(filePath) {
   const rel = path.relative(ROOT, filePath);
+  if (FILE_EXCLUDES.some((pattern) => pattern.test(rel))) return;
   const text = fs.readFileSync(filePath, "utf8");
   const lines = text.split("\n");
 

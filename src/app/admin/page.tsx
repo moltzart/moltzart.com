@@ -1,8 +1,5 @@
 import Link from "next/link";
-import {
-  AlertCircle,
-  ArrowUpRight,
-} from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import {
   fetchTasksDb,
   fetchNewsletterArticlesDb,
@@ -10,7 +7,7 @@ import {
 import { normalizeTaskStatusInput } from "@/lib/task-workflow";
 import { Badge } from "@/components/ui/badge";
 import { StatusDot } from "@/components/admin/status-dot";
-import { Panel } from "@/components/admin/panel";
+import { Panel, PanelHeader } from "@/components/admin/panel";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { NewsletterHighlights } from "@/components/dashboard/newsletter-highlights";
@@ -104,24 +101,14 @@ export default async function AdminDashboard() {
 
       {/* Row 2: Action Queue — only shown when there are urgent items */}
       {actions.length > 0 && <Panel className="flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
-          <div className="flex items-center gap-2">
-            <AlertCircle size={14} className="text-teal-500" />
-            <span className="type-body-sm font-medium text-zinc-200">Action Queue</span>
-            {actions.length > 0 && (
-              <span className="type-body-sm text-zinc-600">{actions.length} items</span>
-            )}
-          </div>
-          <Link
-            href="/admin/tasks"
-            className="type-body-sm text-zinc-500 hover:text-teal-400 transition-colors flex items-center gap-1"
-          >
-            All tasks <ArrowUpRight size={10} />
-          </Link>
-        </div>
+        <PanelHeader
+          icon={AlertCircle}
+          title="Action Queue"
+          count={actions.length}
+          action={{ label: "All tasks", href: "/admin/tasks" }}
+        />
 
-        <div className="divide-y divide-zinc-800/20">
+        <div className="divide-y divide-zinc-800/30">
           {actions.map((item, i) => (
             <Link
               key={i}

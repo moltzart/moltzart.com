@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { fetchProductBySlug } from "@/lib/db";
-import { Panel } from "@/components/admin/panel";
+import { Panel, PanelHeader } from "@/components/admin/panel";
 import { MarkdownRenderer } from "@/components/admin/markdown-renderer";
 import { ProductResearchView } from "@/components/product-research-view";
 import { PageHeader } from "@/components/admin/page-header";
@@ -42,7 +42,6 @@ export default async function ProductDetailPage({ params }: Props) {
 
   const { product, research } = data;
   const statusMeta = STATUS_META[product.status];
-  const StatusIcon = statusMeta.icon;
   const foundationSections = [
     { id: "overview", title: "Opportunity overview", content: product.summary },
     { id: "problem", title: "Problem worth solving", content: product.problem },
@@ -62,17 +61,14 @@ export default async function ProductDetailPage({ params }: Props) {
 
       {foundationSections.length > 0 && (
         <Panel className="flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
-            <div className="flex items-center gap-2">
-              <FileText size={14} className="text-teal-500" />
-              <span className="type-body-sm font-medium text-zinc-200">Product foundation</span>
-            </div>
-            <span className="type-body-sm text-zinc-600">
-              {foundationSections.length} {foundationSections.length === 1 ? "section" : "sections"}
-            </span>
-          </div>
+          <PanelHeader
+            icon={FileText}
+            title="Product foundation"
+            count={foundationSections.length}
+            countLabel={foundationSections.length === 1 ? "section" : "sections"}
+          />
 
-          <div className="divide-y divide-zinc-800/20">
+          <div className="divide-y divide-zinc-800/30">
             {foundationSections.map((section) => (
               <section key={section.id} className="px-4 py-4">
                 <p className="type-body-sm font-medium text-zinc-200">{section.title}</p>

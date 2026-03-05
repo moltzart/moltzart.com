@@ -50,9 +50,9 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
               className="flex items-center justify-between px-4 py-3 w-full text-left hover:bg-zinc-800/20 transition-colors rounded-lg"
             >
               <div className="flex items-center gap-2">
-                <Newspaper size={14} className="text-teal-500" />
+                <Newspaper size={14} className="text-teal-400" />
                 <span className="type-body-sm font-medium text-zinc-200">{digest.label}</span>
-                <span className="type-body-sm text-zinc-600">{digest.articles.length} articles</span>
+                <span className="type-body-sm text-zinc-500">{digest.articles.length} articles</span>
               </div>
               {isOpen
                 ? <ChevronDown size={14} className="text-zinc-600" />
@@ -61,7 +61,7 @@ export function NewsletterView({ digests: initialDigests }: { digests: Newslette
             </button>
 
             {isOpen && (
-              <div className="divide-y divide-zinc-800/20 border-t border-zinc-800/30">
+              <div className="divide-y divide-zinc-800/30 border-t border-zinc-800/30">
                 {digest.articles.map((article) => {
                   const Wrapper = article.link ? "a" : "div";
                   const linkProps = article.link

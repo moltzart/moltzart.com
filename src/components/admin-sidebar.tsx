@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Briefcase, CalendarDays, CheckSquare, FileSearch, LayoutDashboard, LogOut, Newspaper, PenLine } from "lucide-react";
+import { Briefcase, CalendarDays, CheckSquare, FileSearch, LayoutDashboard, LogOut, Newspaper, Paintbrush, PenLine } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -24,6 +24,7 @@ const navItems = [
   { title: "Projects", href: "/admin/projects", icon: Briefcase },
   { title: "Newsletter", href: "/admin/newsletter", icon: Newspaper },
   { title: "Drafts", href: "/admin/drafts", icon: PenLine },
+  { title: "Styleguide", href: "/admin/styleguide", icon: Paintbrush },
 ];
 
 export function AdminSidebar() {

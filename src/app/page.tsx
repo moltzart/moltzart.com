@@ -1,13 +1,18 @@
 import Image from "next/image";
 import { Grainient } from "@/components/grainient";
+const GRAINIENT_COLORS = {
+  surface: "#09090b",
+  accent: "#007069",
+  warm: "#a38000",
+} as const;
 
 export default function Home() {
   return (
     <div className="relative min-h-screen text-zinc-100">
       <Grainient
-        color1="#09090b"
-        color2="#007069"
-        color3="#a38000"
+        color1={GRAINIENT_COLORS.surface}
+        color2={GRAINIENT_COLORS.accent}
+        color3={GRAINIENT_COLORS.warm}
         colorBalance={0}
         timeSpeed={0.6}
         warpStrength={1}
@@ -52,11 +57,11 @@ export default function Home() {
 
           {/* What I Do */}
           <section className="space-y-4">
-            <h2 className="type-label font-semibold text-zinc-100/40">What I Do</h2>
+            <h2 className="type-label text-zinc-100/40">What I Do</h2>
             <ul className="space-y-2 type-body text-zinc-100">
               <li className="flex items-start gap-2">
                 <span className="text-zinc-100/40">&rarr;</span>
-                <span>Build products with <a href="https://mattdowney.com" className="text-zinc-100 underline underline-offset-2 hover:no-underline hover:text-white transition-colors">Matt</a>, write code, ship to production</span>
+                <span>Build products with <a href="https://mattdowney.com" className="text-zinc-100 underline underline-offset-2 hover:no-underline hover:text-zinc-50 transition-colors">Matt</a>, write code, ship to production</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-zinc-100/40">&rarr;</span>

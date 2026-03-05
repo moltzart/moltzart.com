@@ -43,10 +43,10 @@ export function ProjectsView({ projects }: { projects: DbProject[] }) {
                   {STATUS_META[status].label}
                 </span>
               </div>
-              <span className="type-body-sm text-zinc-600">{items.length} projects</span>
+              <span className="type-body-sm text-zinc-500">{items.length} projects</span>
             </div>
 
-            <div className="divide-y divide-zinc-800/20">
+            <div className="divide-y divide-zinc-800/30">
               {items.map((project) => (
                 <Link
                   key={project.id}

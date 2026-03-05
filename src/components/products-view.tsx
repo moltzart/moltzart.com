@@ -25,10 +25,10 @@ const STATUS_ORDER: ProductStatus[] = [
 
 const STATUS_META: Record<ProductStatus, { label: string; tone: string; icon: LucideIcon }> = {
   idea: { label: "Ideas", tone: "text-zinc-300", icon: Lightbulb },
-  researching: { label: "Researching", tone: "text-teal-500", icon: Search },
-  building: { label: "Building", tone: "text-teal-500", icon: Hammer },
-  launched: { label: "Launched", tone: "text-teal-500", icon: Rocket },
-  archived: { label: "Archived", tone: "text-teal-500", icon: Archive },
+  researching: { label: "Researching", tone: "text-teal-400", icon: Search },
+  building: { label: "Building", tone: "text-teal-400", icon: Hammer },
+  launched: { label: "Launched", tone: "text-teal-400", icon: Rocket },
+  archived: { label: "Archived", tone: "text-teal-400", icon: Archive },
 };
 
 function formatDate(input: string): string {
@@ -53,15 +53,15 @@ export function ProductsView({ products }: { products: DbProductIdea[] }) {
           <Panel key={status} className="flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/30">
               <div className="flex items-center gap-2">
-                <Icon size={14} className="text-teal-500" />
+                <Icon size={14} className="text-teal-400" />
                 <span className={`type-body-sm font-medium ${STATUS_META[status].tone}`}>
                   {STATUS_META[status].label}
                 </span>
               </div>
-              <span className="type-body-sm text-zinc-600">{items.length} ideas</span>
+              <span className="type-body-sm text-zinc-500">{items.length} ideas</span>
             </div>
 
-            <div className="divide-y divide-zinc-800/20">
+            <div className="divide-y divide-zinc-800/30">
               {items.map((product) => (
                 <Link
                   key={product.id}

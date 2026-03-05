@@ -1,180 +1,215 @@
 # UI Guidelines — moltzart.com
 
-Practical design principles adapted from mattdowney.com for Moltzart's simpler, focused site.
+Comprehensive design system reference for moltzart.com — dark-only, zinc-based, practical not perfect.
+
+**Stack:** Next.js 16 (App Router, RSC) · TypeScript 5.9 · Tailwind CSS v4 (CSS-first config) · shadcn/ui (new-york style, zinc base) · Geist Sans + Geist Mono · Lucide React · Vercel
 
 ---
 
-## Design System Overview
+## Table of Contents
 
-### Tech Stack
-- **Framework**: Next.js 15 + Tailwind CSS v4
-- **Components**: shadcn/ui
-- **Font**: Geist Sans (variable) + Geist Mono
-- **Theme**: Dark (zinc-based palette)
-- **Icons**: Lucide React (14-16px typical)
-
-### Philosophy
-- **Consistency over novelty** — patterns should be predictable
-- **Performance first** — fast animations, GPU-accelerated properties only
-- **Accessibility** — hover states, focus rings, semantic HTML
-- **Practical not perfect** — ship working UI, iterate later
+1. [Color System](#1-color-system)
+2. [Typography](#2-typography)
+3. [Spacing & Layout](#3-spacing--layout)
+4. [Border Radius](#4-border-radius)
+5. [Borders & Shadows](#5-borders--shadows)
+6. [Animation & Motion](#6-animation--motion)
+7. [Icon System](#7-icon-system)
+8. [Component Catalog](#8-component-catalog)
+9. [State Patterns](#9-state-patterns)
+10. [Accessibility](#10-accessibility)
+11. [Pattern Checklist](#11-pattern-checklist)
+12. [Common Mistakes](#12-common-mistakes)
 
 ---
 
-## Color Tokens (Dark Theme)
+## Philosophy
+
+- **Consistency over novelty** — patterns should be predictable; resist one-off solutions
+- **Performance first** — fast animations, GPU-accelerated properties only (`transform`, `opacity`)
+- **Accessibility** — hover states, focus rings, and semantic HTML are non-negotiable
+- **Practical not perfect** — ship working UI and iterate; don't block on polish
+
+---
+
+## 1. Color System
 
 ### Background & Surface
-```css
---background: oklch(0.141 0.005 285.823)  /* zinc-950 */
---card: oklch(0.21 0.006 285.885)         /* zinc-900 (elevated surface) */
---muted: oklch(0.274 0.006 286.033)       /* zinc-800 (subtle backgrounds) */
-```
 
-### Text
-```css
---foreground: oklch(0.985 0 0)            /* zinc-100 (primary text) */
---muted-foreground: oklch(0.705 0.015 286.067)  /* zinc-500 (secondary text) */
-```
+| Token | Value | Tailwind Class | Usage |
+|---|---|---|---|
+| `--background` | `oklch(0.141 0.005 285.823)` | `bg-zinc-950` | Page background |
+| `--card` | `oklch(0.21 0.006 285.885)` | `bg-zinc-900` | Elevated surface (Panel component) |
+| `--muted` | `oklch(0.274 0.006 286.033)` | `bg-zinc-800` | Subtle backgrounds, hover states |
 
-### Borders & Input
-```css
---border: oklch(1 0 0 / 10%)              /* white/10% */
---input: oklch(1 0 0 / 15%)               /* white/15% */
-```
+**Opacity variants used in practice:**
 
-### Interactive
-```css
---primary: oklch(0.92 0.004 286.32)       /* zinc-300 (interactive elements) */
---ring: oklch(0.552 0.016 285.938)        /* zinc-600 (focus rings) */
-```
+| Class | Usage |
+|---|---|
+| `bg-zinc-900/30` | Card background (standard) |
+| `bg-zinc-800/40` | Hover state background |
+| `bg-zinc-800/60` | Panel component background |
 
-### Semantic Colors
-```css
---destructive: oklch(0.704 0.191 22.216)  /* red */
---chart-1: oklch(0.488 0.243 264.376)     /* purple */
---chart-2: oklch(0.696 0.17 162.48)       /* green */
---chart-3: oklch(0.769 0.188 70.08)       /* yellow */
---chart-4: oklch(0.627 0.265 303.9)       /* pink */
---chart-5: oklch(0.645 0.246 16.439)      /* orange */
-```
+### Text Hierarchy
 
-### Usage in Components
-```tsx
-// Background
-bg-zinc-950          // Page background
-bg-zinc-900/30       // Card background
-bg-zinc-800/40       // Hover state
-bg-zinc-900          // Input background
+| Class | Equivalent | Usage |
+|---|---|---|
+| `text-zinc-100` | `--foreground` | Headings, primary text, strong emphasis |
+| `text-zinc-200` | — | Body text |
+| `text-zinc-300` | — | De-emphasized body, prose content |
+| `text-zinc-400` | — | Muted text, secondary labels |
+| `text-zinc-500` | `--muted-foreground` | Labels, meta text, section headers |
+| `text-zinc-600` | — | Very subtle text, timestamps, placeholders |
 
-// Borders
-border-zinc-800/50   // Card border
-border-zinc-800/30   // Divider
-border-zinc-800      // Input border
+### Borders
 
-// Text
-text-zinc-100        // Headings, primary text
-text-zinc-200        // Body text
-text-zinc-300        // De-emphasized body
-text-zinc-400        // Muted text
-text-zinc-500        // Labels, meta
-text-zinc-600        // Very subtle text
+| Pattern | Usage |
+|---|---|
+| `border-zinc-800/50` | Standard card/component border |
+| `border-zinc-800/30` | Subtle divider (inside cards, between rows) |
+| `border-zinc-800` | Input borders, stronger separators |
+| `border-zinc-700/50` | Panel component border (slightly lighter) |
 
-// Status colors (from admin dashboard patterns)
-text-red-400         // Urgent
-text-amber-400       // Active/Warning
-text-orange-400      // Blocked
-text-blue-400        // Scheduled
-text-emerald-400     // Complete/Success
-text-zinc-400        // Backlog
-```
+### Teal Accent
+
+Teal is the single accent color used consistently across the site. Do not introduce secondary accent colors.
+
+- **Sidebar active state** — `--sidebar-accent: oklch(0.3 0.06 192)`
+- **Section header icons** — used in newsletter-highlights, drafts-view, and similar admin cards
+- **Hover promotions** — `group-hover:text-teal-400` (e.g., StatCard arrow icon)
+- **TOC active state** — `text-teal-400 border-l-teal-400` in ResearchToc
+- **Focus rings** — `focus-visible:ring-teal-500/60` on interactive elements
+
+### Status Colors
+
+| Status | Text | Background | Border | Dot |
+|---|---|---|---|---|
+| Urgent / Error | `text-red-400` | `bg-red-400/10` | `border-red-400/20` | `bg-red-400` |
+| Active / Warning | `text-amber-400` | `bg-amber-400/10` | `border-amber-400/20` | `bg-amber-400` |
+| Blocked | `text-orange-400` | `bg-orange-400/10` | `border-orange-400/20` | `bg-orange-400` |
+| Scheduled | `text-blue-400` | `bg-blue-400/10` | `border-blue-400/20` | `bg-blue-400` |
+| Complete | `text-emerald-400` | `bg-emerald-400/10` | `border-emerald-400/20` | `bg-emerald-400` |
+| Neutral | `text-zinc-400` | `bg-zinc-400/10` | `border-zinc-400/20` | `bg-zinc-400` |
+
+**References:** `src/app/globals.css` (`.dark` block), `src/components/admin/status-dot.tsx`. Project statuses (idea/researching/building/launched/archived) use their own color scheme via `STATUS_META` in `src/lib/projects.ts`.
+
+### Do / Don't
+
+- **Don't** use `text-white` — use `text-zinc-100` (less harsh against dark backgrounds)
+- **Don't** hardcode hex or rgb values — use OKLCH tokens or the Tailwind zinc scale
+- **Do** always apply status colors as a triad: text + background + border together
 
 ---
 
-## Typography
+## 2. Typography
 
 ### Font Setup
+
 ```tsx
-// layout.tsx
+// src/app/layout.tsx
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] })
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] })
 
-// Applied at root
-font-family: var(--font-geist-sans), system-ui, sans-serif
+// Applied at <body>
+// font-family: var(--font-geist-sans), system-ui, sans-serif
 ```
 
-### Type Scale
-```tsx
-text-3xl font-semibold tracking-tight     // Homepage h1 (28px)
-text-xl font-semibold tracking-tight      // Admin page h1 (20px)
-text-sm font-medium                       // Section headers (14px)
-text-sm                                   // Body text (14px)
-text-xs                                   // Meta, labels (12px)
-text-xs font-mono                         // Code, counts (12px)
-```
+### Fluid Type Scale
 
-### Semantic Tags
-- **H1**: Homepage hero or admin page title — `text-xl` or `text-3xl`, `font-semibold tracking-tight`
-- **H2**: Section labels — `text-xs font-medium text-zinc-500 uppercase tracking-wider`
-- **Body**: Most UI text — `text-sm text-zinc-200`
-- **Meta**: Timestamps, counts — `text-xs text-zinc-600`
-- **Links**: Underline on hover, `hover:text-zinc-100` or `hover:text-white`
+All sizes are defined as `clamp()` values in `globals.css` and map to Tailwind's `text-*` utilities via `@theme`.
+
+| Step | CSS Variable | Clamp Value | Approx Size |
+|---|---|---|---|
+| `text-3xs` | `--text-3xs` | `clamp(0.625rem, 0.6rem + 0.1vw, 0.6875rem)` | ~10–11px |
+| `text-2xs` | `--text-2xs` | `clamp(0.6875rem, 0.66rem + 0.12vw, 0.75rem)` | ~11–12px |
+| `text-xs` | `--text-xs` | `clamp(0.75rem, 0.72rem + 0.14vw, 0.8125rem)` | ~12–13px |
+| `text-sm` | `--text-sm` | `clamp(0.875rem, 0.84rem + 0.16vw, 0.9375rem)` | ~14–15px |
+| `text-base` | `--text-base` | `clamp(1rem, 0.96rem + 0.2vw, 1.0625rem)` | ~16–17px |
+| `text-lg` | `--text-lg` | `clamp(1.125rem, 1.05rem + 0.32vw, 1.25rem)` | ~18–20px |
+| `text-xl` | `--text-xl` | `clamp(1.25rem, 1.13rem + 0.5vw, 1.5rem)` | ~20–24px |
+| `text-2xl` | `--text-2xl` | `clamp(1.5rem, 1.3rem + 0.85vw, 1.875rem)` | ~24–30px |
+| `text-3xl` | `--text-3xl` | `clamp(1.875rem, 1.55rem + 1.35vw, 2.5rem)` | ~30–40px |
+| `text-4xl` | `--text-4xl` | `clamp(2.25rem, 1.8rem + 1.9vw, 3.25rem)` | ~36–52px |
+
+### `.type-*` Component Classes
+
+Defined in `globals.css` under `@layer components`. Used 126+ times across 25 files. **Always prefer these over assembling raw Tailwind utilities.**
+
+| Class | Applies | When to Use |
+|---|---|---|
+| `.type-display` | `text-4xl font-semibold tracking-tight` | Homepage hero headline |
+| `.type-h1` | `text-3xl font-medium tracking-tight` | Primary page headings |
+| `.type-h2` | `text-2xl font-medium tracking-tight` | Section headings, stat values |
+| `.type-h3` | `text-xl font-medium tracking-tight` | Sub-section headings |
+| `.type-lead` | `text-lg leading-relaxed` | Intro paragraphs, subtitles |
+| `.type-body` | `text-sm leading-relaxed` | Standard body text |
+| `.type-body-sm` | `text-sm leading-relaxed` | Descriptions, secondary text (currently identical to `.type-body`) |
+| `.type-label` | `text-xs uppercase tracking-[0.08em] font-medium` | Section labels, category headers |
+| `.type-badge` | `text-3xs leading-none uppercase tracking-[0.08em] font-medium font-mono` | Tag badges, tiny labels |
+| `.type-code` | `text-sm font-mono` | Inline code, technical values |
+
+### `.doc-markdown` and Modifiers
+
+Prose-styled markdown rendering classes defined in `globals.css`:
+
+- **`.doc-markdown`** — Full prose treatment with `prose-invert prose-zinc`, sized for long-form reading. Includes styled headings, links, code blocks, tables, and `max-width: 65ch` on text blocks.
+- **`.doc-markdown-compact`** — Tighter spacing and smaller headings for card contexts or sidebars.
+- **`.doc-markdown-subtle`** — Mutes body text to `text-zinc-400` for secondary or supporting content.
 
 ### Do / Don't
-- ✅ Use `tracking-tight` on large headings (≥20px)
-- ✅ Use `tracking-wider` on small uppercase labels
-- ✅ Use `font-mono` for counts, stats, technical data
-- ❌ Don't mix more than 3 font sizes per page
-- ❌ Don't use `font-bold` — use `font-semibold` or `font-medium`
+
+- **Do** prefer `.type-*` classes over assembling raw Tailwind type utilities
+- **Don't** use `font-bold` — use `font-semibold` or `font-medium`
+- **Do** use `tracking-tight` on headings at 20px or larger
+- **Do** use `tracking-wider` on uppercase labels, or just use `.type-label` which includes it
+- **Don't** mix more than 3 type sizes within a single visual section
+- **Do** use `font-mono` for counts, stats, and technical data (or reach for `.type-code` / `.type-badge`)
 
 ---
 
-## Spacing & Layout
-
-### Container Patterns
-```tsx
-// Homepage
-max-w-xl mx-auto                  // 576px centered
-
-// Admin pages
-max-w-4xl                          // 896px (all admin pages)
-
-// Padding
-p-6 md:p-8                         // Page padding (public)
-p-6                                // Page padding (admin)
-px-4 py-3                          // Card padding
-px-4 py-2.5                        // Input padding
-```
+## 3. Spacing & Layout
 
 ### Spacing Scale
-```tsx
-gap-1        // 0.25rem / 4px
-gap-1.5      // 0.375rem / 6px
-gap-2        // 0.5rem / 8px
-gap-2.5      // 0.625rem / 10px
-gap-3        // 0.75rem / 12px (common)
-gap-4        // 1rem / 16px (common)
-gap-6        // 1.5rem / 24px (section spacing)
 
-space-y-1.5  // Tight list spacing
-space-y-2    // Standard list spacing
-space-y-3    // Card list spacing
-space-y-4    // Section group spacing
-space-y-6    // Major section spacing
-```
+| Utility | Value | Common Use |
+|---|---|---|
+| `gap-1` / `space-y-1` | 4px | Tight inline spacing |
+| `gap-1.5` / `space-y-1.5` | 6px | Tight list items |
+| `gap-2` / `space-y-2` | 8px | Icon + text pairs, standard list items |
+| `gap-2.5` | 10px | Input internal spacing |
+| `gap-3` / `space-y-3` | 12px | Card stacks, button groups |
+| `gap-4` / `space-y-4` | 16px | Section group spacing |
+| `gap-6` / `space-y-6` | 24px | Major section spacing |
 
-### Admin Page Structure
+### Semantic Spacing Aliases
+
+| Intent | Value |
+|---|---|
+| Inline gap (icon + text) | `gap-2` |
+| List items | `space-y-1.5` to `space-y-2` |
+| Card stacks | `space-y-3` |
+| Section spacing | `space-y-6` / `gap-6` |
+| Card padding | `px-4 py-3` |
+| Input padding | `px-4 py-2.5` |
+
+### Layout Dimensions
+
+| Context | Max Width | Usage |
+|---|---|---|
+| Public pages | `max-w-xl` (576px) | Homepage, centered content |
+| Admin pages | `max-w-4xl` (896px) | All admin views |
+| Page padding (public) | `p-6 md:p-8` | Responsive padding |
+| Page padding (admin) | `p-6` | Consistent admin padding |
+
+### Admin Page Structure Pattern
+
 ```tsx
 <div className="max-w-4xl">
-  <h1 className="text-xl font-semibold tracking-tight mb-6">
-    Page Title
-  </h1>
-  
-  {/* Content sections */}
-  <div className="space-y-6">
+  <PageHeader title="Page Title" subtitle="Optional subtitle" />
+
+  <div className="space-y-6 mt-6">
     <div>
-      <h2 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">
-        Section Label
-      </h2>
+      <h2 className="type-label text-zinc-500 mb-3">Section Label</h2>
       {/* Section content */}
     </div>
   </div>
@@ -183,46 +218,520 @@ space-y-6    // Major section spacing
 
 ---
 
-## Component Patterns
+## 4. Border Radius
 
-### Card (Interactive)
+Base variable: `--radius: 0.625rem` (10px)
+
+### Computed Variants
+
+| Token | Computation | Value | Tailwind |
+|---|---|---|---|
+| `--radius-sm` | `var(--radius) - 4px` | 6px | `rounded-sm` |
+| `--radius-md` | `var(--radius) - 2px` | 8px | `rounded-md` |
+| `--radius-lg` | `var(--radius)` | 10px | `rounded-lg` |
+| `--radius-xl` | `var(--radius) + 4px` | 14px | `rounded-xl` |
+| `--radius-2xl` | `var(--radius) + 8px` | 18px | `rounded-2xl` |
+| `--radius-3xl` | `var(--radius) + 12px` | 22px | `rounded-3xl` |
+| `--radius-4xl` | `var(--radius) + 16px` | 26px | `rounded-4xl` |
+
+### Usage Guidelines
+
+| Element | Radius | Notes |
+|---|---|---|
+| Cards, panels, inputs | `rounded-lg` | Default for all containers |
+| Buttons | `rounded-md` | shadcn default |
+| Status dots, avatars | `rounded-full` | Circular elements |
+| Tag badges | `rounded` (4px) | Compact pill shape |
+
+---
+
+## 5. Borders & Shadows
+
+### Border System
+
+| Pattern | Tailwind | Usage |
+|---|---|---|
+| Standard card border | `border border-zinc-800/50` | Cards, panels, containers |
+| Panel component border | `border border-zinc-700/50` | Elevated Panel component |
+| Subtle divider | `border-zinc-800/30` | Row separators inside cards |
+| Input border | `border border-zinc-800` | Form inputs |
+| Strong separator | `border-b border-zinc-800` | Section dividers, breadcrumb separator |
+
+### Shadow Tokens
+
+Defined in `globals.css` `.dark` block and registered in `@theme inline`:
+
+| Token | Value | Usage |
+|---|---|---|
+| `--shadow-card` | `0 1px 2px -1px oklch(1 0 0 / 4%), 0 2px 4px oklch(1 0 0 / 3%)` | Elevated panels, popovers |
+| `--shadow-overlay` | `0 4px 12px -2px oklch(0 0 0 / 40%), 0 0 0 1px oklch(1 0 0 / 6%)` | Modals, sheets, dropdown menus |
+
+Usage in Tailwind: `shadow-card`, `shadow-overlay`
+
+### Rules
+
+- Borders are the default — use them on all cards and containers
+- Shadows are for overlays only (popovers, sheets, modals)
+- Never combine heavy shadow + thick border — pick one for depth
+- Don't use `--shadow-overlay` on static cards (use `--shadow-card` or just borders)
+
+---
+
+## 6. Animation & Motion
+
+### Duration Scale
+
+| Token | CSS Variable | Tailwind | Usage |
+|---|---|---|---|
+| Fast | `--duration-fast` / `100ms` | `duration-100` | Dropdowns, micro-interactions |
+| Normal | `--duration-normal` / `200ms` | `duration-200` | Background color changes, most transitions |
+| Slow | `--duration-slow` / `300ms` | `duration-300` | MAXIMUM for any UI animation |
+
+**Rule**: Never use `duration-500` or higher.
+
+### Easing
+
+| Token | CSS Variable | Tailwind | When |
+|---|---|---|---|
+| Ease out | `--ease-out` / `cubic-bezier(0.16, 1, 0.3, 1)` | `ease-out` | Entering elements (appearing, decelerate into place) |
+| Ease in | `--ease-in` / `cubic-bezier(0.7, 0, 0.84, 0)` | `ease-in` | Exiting elements (disappearing, accelerate away) |
+
+**Note:** The CSS custom properties define custom curves that differ from Tailwind's built-in `ease-out`/`ease-in` defaults. For most transitions, `transition-colors` with default easing is sufficient. Use the custom properties when precise control is needed (e.g., framer-motion or inline styles).
+| Default | — | `transition-colors` | Color transitions (most common on this site) |
+
+### Current Animation Patterns
+
+```tsx
+// Color transition (most common)
+hover:bg-zinc-800/40 transition-colors
+
+// Multi-property
+transition-all duration-150
+
+// Specific property
+transition-opacity duration-200
+
+// Loading spinner
+animate-spin  // Only on loading states (RefreshCw icon)
+```
+
+### Button Interactions
+
+```tsx
+// Add to all interactive buttons for tactile feedback
+active:scale-[0.98] transition-transform
+
+// Full example
+<button className="
+  py-2.5 px-4
+  bg-zinc-800 hover:bg-zinc-700
+  active:scale-[0.98]
+  transition-all duration-150
+">
+  Click me
+</button>
+```
+
+### Motion (framer-motion) Presets
+
+`motion` v12 is installed. Use these presets for page/list animations:
+
+```tsx
+// Fade in
+const fadeIn = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  transition: { duration: 0.2 }
+}
+
+// Slide up (cards, list items)
+const slideUp = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] }
+}
+
+// Stagger children (lists)
+const staggerContainer = {
+  animate: { transition: { staggerChildren: 0.05 } }
+}
+
+// Spring config for interactive elements
+const spring = { type: "spring", stiffness: 400, damping: 30 }
+
+// Exit pattern
+<AnimatePresence mode="wait">
+  {show && <motion.div {...fadeIn} exit={{ opacity: 0 }} key="item" />}
+</AnimatePresence>
+```
+
+**Rule**: Don't add Motion to shadcn overlays — they have built-in transitions via `tw-animate-css`.
+
+### GPU Acceleration
+
+Prefer animating:
+- `transform` (scale, translate, rotate)
+- `opacity`
+
+Avoid animating:
+- `width`, `height`, `top`, `left`, `right`, `bottom`, `margin`, `padding`
+
+Add `will-change-transform` only if profiling shows jank.
+
+### Do / Don't
+
+- Keep all animations at or under 300ms
+- Use `transition-colors` for hover states
+- Add `active:scale-[0.98]` to buttons for tactile feedback
+- Use `ease-out` for appearing elements, `ease-in` for disappearing
+- Don't animate from `scale(0)` — start from `0.95` or higher
+- Don't add animation to every element — reserve for intentional interactions
+
+---
+
+## 7. Icon System
+
+Uses Lucide React icons throughout.
+
+### Size Guidelines
+
+| Size | Usage |
+|---|---|
+| `size={12}` | Small inline icons (chevrons, meta indicators) |
+| `size={14}` | Status icons, inline secondary icons |
+| `size={16}` | Default section icons, list item icons |
+| `size={18}` | Larger icons (auth page Lock, emphasis) |
+| `size={32}` | EmptyState illustration icon |
+
+### Color & States
+
+```tsx
+// Default
+className="text-zinc-500"
+
+// Hover (via group)
+className="text-zinc-500 group-hover:text-zinc-400"
+
+// Teal accent (section headers, active states)
+className="text-teal-400"
+
+// Hover to teal (StatCard pattern)
+className="text-zinc-700 group-hover:text-teal-400 transition-colors"
+
+// Status colors
+className="text-red-400"       // Urgent
+className="text-amber-400"     // Active/Warning
+className="text-emerald-400"   // Complete
+className="text-blue-400"      // Scheduled
+```
+
+### Common Patterns
+
+```tsx
+// Icon + text (most common pattern)
+<div className="flex items-center gap-2">
+  <Icon size={16} className="text-zinc-500 shrink-0" />
+  <span className="text-sm text-zinc-200">{text}</span>
+</div>
+
+// Directional icon that changes on hover
+<ArrowRight size={14} className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
+
+// Teal accent icon for section headers
+<FileText size={16} className="text-teal-400 shrink-0" />
+```
+
+### Rules
+
+- Always add `shrink-0` to icons in flex containers
+- Icons are decorative — don't rely on them as sole communication
+- Use consistent sizes per context (don't mix 14 and 16 in the same row)
+
+---
+
+## 8. Component Catalog
+
+All reusable components with their file path, props, and usage.
+
+### Admin Components
+
+#### Panel
+**File**: `src/components/admin/panel.tsx`
+
+Base elevated container for admin content sections.
+
+```tsx
+// Renders: rounded-lg border border-zinc-700/50 bg-zinc-800/60
+import { Panel } from "@/components/admin/panel"
+
+<Panel className="p-4">
+  {/* Content */}
+</Panel>
+```
+
+**Props**: Extends `React.ComponentProps<"div">` — accepts all div props including `className` for composition.
+
+---
+
+#### PageHeader
+**File**: `src/components/admin/page-header.tsx`
+
+Page title with optional subtitle, breadcrumbs, and action slot.
+
+```tsx
+import { PageHeader } from "@/components/admin/page-header"
+
+<PageHeader
+  title="Research"
+  subtitle="12 artifacts"
+  breadcrumbs={[
+    { label: "Admin", href: "/admin" },
+    { label: "Research" }
+  ]}
+>
+  <Button>Action</Button>
+</PageHeader>
+```
+
+**Props**:
+| Prop | Type | Description |
+|---|---|---|
+| `title` | `string` | Page heading (rendered as `text-lg font-semibold`) |
+| `subtitle` | `string?` | Secondary text below title (`text-sm text-zinc-500`) |
+| `breadcrumbs` | `Array<{ label: string; href?: string }>?` | Breadcrumb trail above title |
+| `children` | `ReactNode?` | Action buttons, right-aligned |
+
+---
+
+#### EmptyState
+**File**: `src/components/admin/empty-state.tsx`
+
+Centered message for zero-data views.
+
+```tsx
+import { EmptyState } from "@/components/admin/empty-state"
+import { FileText } from "lucide-react"
+
+<EmptyState
+  icon={FileText}
+  message="No research articles yet."
+  action={<Button>Add Article</Button>}
+/>
+```
+
+**Props**:
+| Prop | Type | Description |
+|---|---|---|
+| `icon` | `LucideIcon` | Large centered icon (`size={32}`, 50% opacity) |
+| `message` | `string` | Description text (`.type-body-sm`) |
+| `action` | `ReactNode?` | Optional CTA button below message |
+
+---
+
+#### StatusDot
+**File**: `src/components/admin/status-dot.tsx`
+
+8px colored dot indicator with optional ping animation.
+
+```tsx
+import { StatusDot } from "@/components/admin/status-dot"
+
+<StatusDot variant="active" />
+<StatusDot variant="urgent" pulse />
+```
+
+**Props**:
+| Prop | Type | Description |
+|---|---|---|
+| `variant` | `"urgent" \| "active" \| "blocked" \| "scheduled" \| "complete" \| "neutral"` | Color variant |
+| `pulse` | `boolean?` | Adds `animate-ping` ring animation |
+| `className` | `string?` | Additional classes |
+
+**Variant colors**: urgent=red, active=amber, blocked=orange, scheduled=blue, complete=emerald, neutral=zinc
+
+---
+
+#### TagBadge
+**File**: `src/components/admin/tag-badge.tsx`
+
+Six tag exports for categorical labels, plus four color map exports.
+
+**Tag components**:
+| Export | Prop | Usage |
+|---|---|---|
+| `LaneTag` | `lane: string` | Radar lane category |
+| `SourceTag` | `source: string` | Newsletter source attribution |
+| `PillarTag` | `pillar: string` | Content pillar label |
+| `StatusTag` | `status: ProjectStatus` | Project status with icon |
+| `KindTag` | `kind: ProjectKind` | Project kind (product/general) |
+| `DomainTag` | `domain: string` | Task domain category |
+
+All share base style: `inline-flex items-center px-2 py-1 rounded type-badge shrink-0`
+
+**Color map exports** (for custom rendering, filter button active states):
+- `laneColors` — `Record<string, { tag: string; bg: string }>`
+- `sourceColors` — `Record<string, string>`
+- `pillarColors` — `Record<string, string>`
+- `domainColors` — `Record<string, string>`
+
+Fallback: `bg-zinc-700/40 text-zinc-400` for unknown values.
+
+**Rule**: Never create inline `<span>` badge components. Always use the TagBadge exports.
+
+---
+
+#### MarkdownRenderer
+**File**: `src/components/admin/markdown-renderer.tsx`
+
+Prose-styled markdown with GFM table support and optional heading IDs.
+
+```tsx
+import { MarkdownRenderer } from "@/components/admin/markdown-renderer"
+
+<MarkdownRenderer
+  content={markdownString}
+  generateIds
+  skipFirstH1
+/>
+```
+
+**Props**:
+| Prop | Type | Description |
+|---|---|---|
+| `content` | `string` | Raw markdown string |
+| `className` | `string?` | Additional wrapper classes |
+| `generateIds` | `boolean?` | Adds slugified `id` to `<h2>` elements (for TOC linking) |
+| `skipFirstH1` | `boolean?` | Hides the first `<h1>` (when page has its own title) |
+
+Includes custom table rendering with the standard admin table style (`rounded-lg border border-zinc-800/50 bg-zinc-900/30`).
+
+---
+
+#### ResearchGroup
+**File**: `src/components/admin/research-group.tsx`
+
+Collapsible section with icon, title, and artifact count.
+
+```tsx
+import { ResearchGroup } from "@/components/admin/research-group"
+
+<ResearchGroup title="AI & Machine Learning" count={5}>
+  {/* List of items */}
+</ResearchGroup>
+
+<ResearchGroup title="Unassigned" count={3} isUnassigned>
+  {/* Items */}
+</ResearchGroup>
+```
+
+**Props**:
+| Prop | Type | Description |
+|---|---|---|
+| `title` | `string` | Group heading |
+| `count` | `number` | Displayed as "{n} artifact(s)" |
+| `isUnassigned` | `boolean?` | Uses Inbox icon instead of FolderOpen |
+| `children` | `ReactNode` | Content revealed when expanded |
+
+Client component (`"use client"`). Starts expanded by default.
+
+---
+
+#### ResearchToc
+**File**: `src/components/admin/research-toc.tsx`
+
+Sticky table of contents with IntersectionObserver-driven active state.
+
+```tsx
+import { ResearchToc } from "@/components/admin/research-toc"
+
+<ResearchToc headings={[
+  { id: "section-1", text: "Section One" },
+  { id: "section-2", text: "Section Two" },
+]} />
+```
+
+**Props**:
+| Prop | Type | Description |
+|---|---|---|
+| `headings` | `Array<{ id: string; text: string }>` | Heading anchors to track |
+
+Active state: `text-teal-400 border-l-teal-400`. Inactive: `text-zinc-500 border-l-transparent hover:text-zinc-300`.
+
+Client component. Returns `null` when headings array is empty.
+
+---
+
+### Dashboard Components
+
+#### StatCard
+**File**: `src/components/dashboard/stat-card.tsx`
+
+Linked metric card for dashboard overview.
+
+```tsx
+import { StatCard } from "@/components/dashboard/stat-card"
+
+<StatCard
+  title="Research"
+  value={42}
+  subtitle="Last 7 days"
+  href="/admin/research"
+/>
+```
+
+**Props**:
+| Prop | Type | Description |
+|---|---|---|
+| `title` | `string` | Label above value (`.type-label text-zinc-500`) |
+| `value` | `string \| number` | Primary metric (`.type-h2 text-zinc-100`) |
+| `subtitle` | `string?` | Context below value (`.type-body-sm text-zinc-600`) |
+| `href` | `string` | Link destination |
+| `children` | `ReactNode?` | Extra content below subtitle |
+
+Uses Panel styling (`border-zinc-700/50 bg-zinc-800/60`). Arrow icon promotes to teal on hover (`group-hover:text-teal-400`).
+
+---
+
+### Pattern Components
+
+These are not standalone components but documented patterns for consistency.
+
+#### Card (Interactive)
+
 ```tsx
 <div className="
-  border border-zinc-800/50 
-  rounded-lg 
-  bg-zinc-900/30 
-  hover:bg-zinc-800/40 
+  border border-zinc-800/50
+  rounded-lg
+  bg-zinc-900/30
+  hover:bg-zinc-800/40
   transition-colors
   px-4 py-3
 ">
-  {/* Card content */}
+  {/* Content */}
 </div>
 ```
 
-### Card (Static Display)
+#### Card (Static)
+
 ```tsx
-<div className="
-  rounded-lg 
-  border border-zinc-800/50 
-  bg-zinc-900/30 
-  p-4
-">
-  {/* Card content */}
+<div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4">
+  {/* Content */}
 </div>
 ```
 
-### List Item Link
+#### List Item Link
+
 ```tsx
 <Link
   href="/path"
   className="
-    flex items-center gap-3 
-    px-4 py-3 
-    border border-zinc-800/50 
-    rounded-lg 
-    bg-zinc-900/30 
-    hover:bg-zinc-800/40 
-    transition-colors 
+    flex items-center gap-3
+    px-4 py-3
+    border border-zinc-800/50
+    rounded-lg
+    bg-zinc-900/30
+    hover:bg-zinc-800/40
+    transition-colors
     group
   "
 >
@@ -232,75 +741,8 @@ space-y-6    // Major section spacing
 </Link>
 ```
 
-### Collapsible Section
-```tsx
-const [collapsed, setCollapsed] = useState(false)
-const Chevron = collapsed ? ChevronRight : ChevronDown
+#### Table (Admin)
 
-<div className="border border-zinc-800/50 rounded-lg bg-zinc-900/30">
-  <button
-    onClick={() => setCollapsed(!collapsed)}
-    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/20 transition-colors rounded-lg"
-  >
-    <Icon size={16} className="text-zinc-500" />
-    <span className="text-sm font-medium text-zinc-200 flex-1 text-left">
-      {title}
-    </span>
-    <Chevron size={14} className="text-zinc-600" />
-  </button>
-  {!collapsed && (
-    <div className="px-4 pb-3 border-t border-zinc-800/30">
-      {/* Content */}
-    </div>
-  )}
-</div>
-```
-
-### Tag Badges
-
-Categorical tags for radar lanes and newsletter sources. Use the shared component at `src/components/admin/tag-badge.tsx` — do **not** create inline badge components.
-
-```tsx
-import { LaneTag, SourceTag } from "@/components/admin/tag-badge";
-
-// Radar lane — colored pill, uppercase
-<LaneTag lane={item.lane} />
-
-// Newsletter source — colored pill, proper case
-<SourceTag source={article.source} />
-```
-
-Both variants share the same base style:
-```
-inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium shrink-0
-```
-
-Color maps (`laneColors`, `sourceColors`) are also exported for cases that need the raw color value (e.g., filter button active states). Fallback is `bg-zinc-700/40 text-zinc-400` for unknown values.
-
-**Placement**: In compact list rows (dashboard and full-page), tags are right-aligned on the same row as the title, with the title taking `flex-1 min-w-0`.
-
-**Do not use**: `<Badge variant="outline">` or inline `<span>` for lane/source tags. Always use `LaneTag` / `SourceTag`.
-
-### Status Badge
-```tsx
-<span className="
-  text-xs font-mono 
-  px-2 py-0.5 
-  rounded-full 
-  border
-  bg-red-400/10 text-red-400 border-red-400/20
-">
-  {count}
-</span>
-
-// Status variants:
-bg-red-400/10 text-red-400 border-red-400/20        // Urgent
-bg-amber-400/10 text-amber-400 border-amber-400/20  // Active
-bg-emerald-400/10 text-emerald-400 border-emerald-400/20  // Complete
-bg-zinc-400/10 text-zinc-400 border-zinc-400/20    // Neutral
-```
-
-### Table (Admin Pattern)
 ```tsx
 <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 overflow-hidden">
   <table className="w-full">
@@ -318,37 +760,32 @@ bg-zinc-400/10 text-zinc-400 border-zinc-400/20    // Neutral
 </div>
 ```
 
-### Input
+#### Input
+
 ```tsx
 <input
   type="text"
   className="
-    w-full 
-    px-4 py-2.5 
-    bg-zinc-900 
-    border border-zinc-800 
-    rounded-lg 
-    text-zinc-100 
-    placeholder-zinc-600 
-    focus:outline-none 
-    focus:border-zinc-600 
+    w-full px-4 py-2.5
+    bg-zinc-900 border border-zinc-800 rounded-lg
+    text-zinc-100 placeholder-zinc-600
+    focus:outline-none focus:border-zinc-600
     text-sm
   "
   placeholder="Placeholder"
 />
 ```
 
-### Button (Primary)
+#### Button (Primary)
+
 ```tsx
 <button className="
-  w-full 
-  py-2.5 
-  bg-zinc-800 
-  hover:bg-zinc-700 
-  rounded-lg 
-  text-sm font-medium 
-  transition-colors 
-  disabled:opacity-50
+  w-full py-2.5
+  bg-zinc-800 hover:bg-zinc-700
+  rounded-lg text-sm font-medium
+  transition-colors
+  active:scale-[0.98]
+  disabled:opacity-50 disabled:pointer-events-none
 ">
   Button Text
 </button>
@@ -356,233 +793,163 @@ bg-zinc-400/10 text-zinc-400 border-zinc-400/20    // Neutral
 
 ---
 
-## Animation Guidelines
+## 9. State Patterns
 
-### Duration Scale
+### Loading
+- Use `<Skeleton />` (shadcn) for async content placeholders
+- Use `animate-spin` on RefreshCw icon for refresh actions
+- Apply `opacity-50 pointer-events-none` on containers while loading
+
 ```tsx
-duration-100  // 100ms — Dropdowns, micro-interactions
-duration-150  // 150ms — Icon color changes (current standard)
-duration-200  // 200ms — Background color changes, most transitions
-duration-300  // 300ms — MAXIMUM for any UI animation
-// NEVER use duration-500 or higher
+// Refresh button loading state
+<RefreshCw size={14} className={cn("text-zinc-500", loading && "animate-spin")} />
+
+// Container loading overlay
+<div className={cn("space-y-3", loading && "opacity-50 pointer-events-none")}>
+  {/* Content */}
+</div>
 ```
 
-### Easing
+### Empty
+Use the `EmptyState` component for zero-data views:
 ```tsx
-// ENTERING elements (appearing) — decelerate into place
-ease-out
+import { EmptyState } from "@/components/admin/empty-state"
+import { FileText } from "lucide-react"
 
-// EXITING elements (disappearing) — accelerate away
-ease-in
-
-// Color transitions (most common on this site)
-transition-colors  // Uses default easing (ease)
+<EmptyState icon={FileText} message="No articles found." />
 ```
 
-### Current Animation Patterns
+### Error
+Inline error text for form validation:
 ```tsx
-// Color transition (most common)
-hover:bg-zinc-800/40 transition-colors
+// Form field error
+<p className="text-sm text-red-400 mt-1">{error}</p>
 
-// Multi-property (when needed)
-transition-all
-
-// Specific property
-transition-opacity duration-200
-
-// Rotate (refresh icon)
-animate-spin  // Only on loading states
+// Error state on input
+<input className="... border-red-400/50 focus:border-red-400" />
 ```
 
-### Button Interactions
+### Disabled
 ```tsx
-// Add to all interactive buttons
-active:scale-[0.98] transition-transform
+// Button disabled state
+disabled:opacity-50 disabled:pointer-events-none
 
-// Full example
-<button className="
-  py-2.5 px-4
-  bg-zinc-800 hover:bg-zinc-700
-  active:scale-[0.98]
-  transition-all duration-150
-">
-  Click me
+// Suppress press animation when disabled
+disabled:active:scale-100
+
+// Full disabled button
+<button
+  disabled={isSubmitting}
+  className="
+    py-2.5 bg-zinc-800 hover:bg-zinc-700
+    active:scale-[0.98]
+    disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100
+    transition-all
+  "
+>
+  Submit
 </button>
 ```
 
-### Do / Don't
-- ✅ Keep all animations ≤300ms
-- ✅ Use `transition-colors` for hover states (default easing is fine)
-- ✅ Add `active:scale-[0.98]` to buttons for tactile feedback
-- ✅ Use `ease-out` for appearing elements
-- ✅ Use `ease-in` for disappearing elements
-- ❌ Don't animate from `scale(0)` — start from 0.95+
-- ❌ Don't use `duration-500` or higher
-- ❌ Don't animate `width`, `height`, `top`, `left` — use `transform` and `opacity`
-- ❌ Don't add animation to every element — reserve for intentional interactions
-
 ---
 
-## Borders vs Shadows
+## 10. Accessibility
 
-### Current Pattern: Borders
-This site uses **borders** for all card and component outlines:
+### Focus Ring Patterns
 
+**shadcn default** (used on all shadcn components):
 ```tsx
-border border-zinc-800/50  // Standard card border
-border border-zinc-800/30  // Subtle divider
+focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
-### When to Use Shadows (Future Consideration)
-Matt's site uses subtle shadows for depth. If we adopt shadows:
-
-```css
-/* Multi-layer shadow for subtle depth */
-box-shadow:
-  0px 0px 0px 1px rgba(255, 255, 255, 0.06),
-  0px 1px 2px -1px rgba(255, 255, 255, 0.06),
-  0px 2px 4px 0px rgba(255, 255, 255, 0.04);
-```
-
-**Current decision**: Stick with borders. They're simpler and consistent with shadcn/ui defaults.
-
----
-
-## Icon Usage
-
-### Size Guidelines
+**Custom interactive focus** (used on custom interactive elements like tasks-view):
 ```tsx
-size={16}  // Section icons (default)
-size={14}  // Inline icons, status icons
-size={12}  // Small icons (chevrons, meta)
-size={18}  // Larger icons (Lock on auth pages)
+focus-visible:ring-1 focus-visible:ring-teal-500/60
 ```
 
-### Color & States
-```tsx
-// Default
-className="text-zinc-500"
-
-// Hover state
-className="text-zinc-500 group-hover:text-zinc-400"
-
-// Status colors
-className="text-red-400"      // Urgent
-className="text-amber-400"    // Active
-className="text-emerald-400"  // Complete
-```
-
-### Common Patterns
-```tsx
-// Icon + text
-<div className="flex items-center gap-2">
-  <Icon size={16} className="text-zinc-500" />
-  <span className="text-sm text-zinc-200">{text}</span>
-</div>
-
-// Icon with shrink protection
-<Icon size={16} className="text-zinc-500 shrink-0" />
-
-// Icon that changes on hover
-<ArrowRight size={14} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-```
-
----
-
-## Accessibility
-
-### Focus States
-shadcn/ui button component includes comprehensive focus styles:
-
-```tsx
-outline-none 
-focus-visible:border-ring 
-focus-visible:ring-ring/50 
-focus-visible:ring-[3px]
-```
-
-**Rule**: Never remove focus styles. If default ring doesn't fit your design, replace it with a visible alternative.
-
-### Interactive Elements
-- ✅ All clickable elements should have hover states
-- ✅ Use `cursor-pointer` for non-button clickable elements (or just use `<button>`)
-- ✅ Add `disabled:opacity-50` and `disabled:pointer-events-none` to buttons
-- ✅ Use semantic HTML (`<button>`, `<a>`, `<input>`)
+**Rule**: Never remove focus styles. If the default ring does not fit the design, replace it with a visible alternative — never just `outline-none` without a replacement.
 
 ### Text Contrast
 All current text/background combinations pass WCAG AA:
-- `text-zinc-100` on `bg-zinc-950` ✅
-- `text-zinc-200` on `bg-zinc-950` ✅
-- `text-zinc-300` on `bg-zinc-900/30` ✅
-- `text-zinc-500` on `bg-zinc-950` ✅ (for meta text, labels)
+
+| Text | Background | Passes |
+|---|---|---|
+| `text-zinc-100` | `bg-zinc-950` | AA |
+| `text-zinc-200` | `bg-zinc-950` | AA |
+| `text-zinc-300` | `bg-zinc-900/30` | AA |
+| `text-zinc-400` | `bg-zinc-950` | AA |
+| `text-zinc-500` | `bg-zinc-950` | AA (large text only) |
+
+### Interactive Element Rules
+- All clickable elements must have hover states
+- Use `cursor-pointer` on non-button clickable elements (or just use `<button>`)
+- Add `disabled:opacity-50 disabled:pointer-events-none` to buttons
+- Use semantic HTML (`<button>`, `<a>`, `<input>`) — avoid `div` with `onClick`
+- Ensure all interactive elements are keyboard accessible
+
+### Color Independence
+- Never use color as the only indicator — pair with icons, text, or position
+- Status colors are always accompanied by StatusDot or StatusTag components that include text labels
 
 ---
 
-## Performance
-
-### GPU-Accelerated Properties
-Prefer these for animations:
-- `transform` (scale, translate, rotate)
-- `opacity`
-
-Avoid animating:
-- `width`, `height`
-- `top`, `left`, `right`, `bottom`
-- `margin`, `padding`
-
-### Will-Change
-Not currently used. Add only if profiling shows jank:
-```tsx
-className="will-change-transform"
-```
-
----
-
-## Pattern Checklist
+## 11. Pattern Checklist
 
 When building a new page or component, verify:
 
-- [ ] Uses appropriate container max-width (`max-w-xl` for public, `max-w-4xl` for admin)
-- [ ] H1 uses `text-xl font-semibold tracking-tight`
-- [ ] Section labels use `text-xs font-medium text-zinc-500 uppercase tracking-wider`
+- [ ] Uses appropriate container max-width (`max-w-xl` public, `max-w-4xl` admin)
+- [ ] Page title uses `PageHeader` component or `.type-h1`
+- [ ] Section labels use `.type-label text-zinc-500`
 - [ ] Cards use `border-zinc-800/50`, `bg-zinc-900/30`, `rounded-lg`
+- [ ] Elevated panels use `Panel` component (`border-zinc-700/50 bg-zinc-800/60`)
 - [ ] Interactive elements have `hover:bg-zinc-800/40 transition-colors`
-- [ ] Buttons have `active:scale-[0.98]` if appropriate
-- [ ] Icons are 14-16px and use `shrink-0` when in flex containers
-- [ ] All transitions are ≤300ms
-- [ ] Focus states are visible (don't remove `focus-visible:ring`)
-- [ ] Spacing uses consistent scale (gap-3, gap-4, space-y-3, etc.)
+- [ ] Buttons have `active:scale-[0.98]` and `disabled:opacity-50`
+- [ ] Icons use standard sizes (12/14/16/18) and include `shrink-0` in flex
+- [ ] Typography uses `.type-*` classes, not raw Tailwind equivalents
+- [ ] All transitions are 300ms or under
+- [ ] Focus states are visible (never remove `focus-visible:ring`)
+- [ ] Tag badges use `TagBadge` exports, not inline `<span>` elements
+- [ ] Status indicators use `StatusDot` or `StatusTag`, not custom dots
+- [ ] Empty states use `EmptyState` component
+- [ ] Spacing uses the documented scale
 
 ---
 
-## Common Mistakes to Avoid
+## 12. Common Mistakes
 
-1. **Inconsistent spacing** — Use the documented scale (gap-3, gap-4, space-y-3). Don't invent new values.
-2. **Missing hover states** — All interactive elements need hover feedback.
-3. **Slow animations** — Nothing over 300ms.
-4. **Wrong text color** — Don't use `text-white` (too harsh). Use `text-zinc-100` or `text-zinc-200`.
-5. **Forgotten `shrink-0` on icons** — Icons in flex containers collapse. Add `shrink-0`.
-6. **Missing transitions** — Add `transition-colors` to elements with hover states.
-7. **Wrong container width** — Admin pages use `max-w-4xl`, public pages use `max-w-xl`.
-8. **Uppercase without tracking** — Small uppercase text needs `tracking-wider`.
-9. **Badges/status next to page title** — Admin page titles are `<h1>` only. No badges, counters, or status indicators inline with the title. Status belongs in the page content (per-row badges on list items).
+1. **Using raw Tailwind instead of `.type-*` classes** — If a `.type-*` class exists for what you need, use it. Do not assemble `text-xl font-medium tracking-tight` when `.type-h3` does the same thing.
 
----
+2. **Creating inline badge components** — Never build inline `<span className="text-xs px-2 ...">` badges. Use the `TagBadge` exports (`LaneTag`, `SourceTag`, `StatusTag`, etc.).
 
-## Next Steps / Future Improvements
+3. **Adding Motion to shadcn overlays** — shadcn components (Dialog, Popover, Sheet, DropdownMenu) already have transitions via `tw-animate-css`. Adding framer-motion will conflict.
 
-1. **Add active:scale to all buttons** — Currently missing on most buttons
-2. **Consider shadow system** — If borders feel flat, test Matt's shadow pattern
-3. **Staggered list animations** — For future paginated content (research, drafts)
-4. **Loading states** — Skeleton components for async data
-5. **Toast notifications** — For actions like "Copied" or "Saved"
-6. **Mobile menu** — If navigation grows beyond current simple links
+4. **Using `--shadow-overlay` on cards** — Overlay shadows are for floating elements (modals, popovers). Use `--shadow-card` or just borders for static cards.
+
+5. **Using `text-white`** — Too harsh. Use `text-zinc-100` for primary text.
+
+6. **Inconsistent spacing** — Use the documented scale (`gap-2`, `gap-3`, `gap-4`, `gap-6`). Do not invent `gap-5` or `gap-7`.
+
+7. **Missing hover states** — All interactive elements need hover feedback.
+
+8. **Slow animations** — Nothing over 300ms. Never use `duration-500`.
+
+9. **Forgotten `shrink-0` on icons** — Icons in flex containers will collapse without `shrink-0`.
+
+10. **Missing transitions** — Add `transition-colors` to elements with hover states.
+
+11. **Wrong container width** — Admin = `max-w-4xl`, public = `max-w-xl`.
+
+12. **Uppercase without tracking** — Small uppercase text needs `tracking-wider` (or use `.type-label` / `.type-badge`).
+
+13. **Badges next to page titles** — Admin page titles are clean `<h1>` only. Status belongs per-row in content.
+
+14. **Using `font-bold`** — Never. Use `font-semibold` or `font-medium`.
 
 ---
 
 ## Reference
 
-- **Inspiration**: [mattdowney.com Design Guidelines](https://mattdowney.com)
 - **Component library**: [shadcn/ui](https://ui.shadcn.com)
 - **Icons**: [Lucide React](https://lucide.dev)
-- **Animation reference**: [Emil Kowalski — 7 Practical Tips](https://emilkowal.ski/ui/7-practical-design-tips)
+- **Animation**: [Emil Kowalski — 7 Practical Tips](https://emilkowal.ski/ui/7-practical-design-tips)
+- **Typography**: [Geist Font](https://vercel.com/font)
