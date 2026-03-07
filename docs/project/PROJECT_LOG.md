@@ -1,5 +1,23 @@
 # Project Log
 
+## 2026-03-06 (session 24)
+
+- Removed subtitles from all 9 admin page headers — list pages are title-only, detail pages keep breadcrumbs.
+- Removed `syncCronDefinitionsFromOpenClaw` — the TODO.md fallback that read `../openclaw-home/TODO.md` on every calendar page load and re-upserted cron definitions, overwriting telemetry API data. Deleted all markdown parsing helpers (`extractRecurringRows`, `parseDayPrefix`, `parseTimeToCron`, etc.), GitHub fetch logic, and `scheduleSource` from `OpenClawCronMeta`. Telemetry API (`/api/ingest/crons`) is now the sole source of truth for cron definitions.
+- Added `sync: true` flag to `/api/ingest/crons` — when set, `replaceCronJobsSnapshot` disables any `cron_jobs` rows not in the payload. Without the flag, behavior is additive-only (`upsertCronJobs`).
+- Added guard in `categorizeCrons` for empty/malformed `schedule_expr` (< 5 fields) to prevent `parseCronField` crash.
+- Added deduplication for `alwaysRunning` crons to prevent React duplicate key errors from duplicate DB rows.
+- Manually cleaned up orphaned cron rows in Neon DB: disabled 6 old X Draft/Post slug-based crons, 10 UUID-based duplicates, and 1 meta-task (`Push Cron Telemetry` with empty schedule_expr). Enabled 4 new X Post crons.
+- Committed and pushed sessions 20-24 (71 files, 5336 insertions) to unblock Vercel deploy.
+- **Decision:** Telemetry API is the sole source of truth for cron definitions. No file-based fallbacks. The `sync: true` flag gives the caller control over whether a push is a full snapshot (prunes stale) or additive.
+- **Decision:** All admin page headers are title-only. Detail pages keep breadcrumbs for navigation but no subtitles.
+- **Learned:** `syncCronDefinitionsFromOpenClaw` ran on every calendar page load and called `replaceCronJobsSnapshot`, which disabled any DB rows not in the parsed markdown. This meant telemetry API pushes were immediately overwritten by the next page load. Two competing write paths to the same table = guaranteed data corruption.
+- **Learned:** When renaming crons, the old DB rows persist because the ingest API only upserts — it never deletes. Without a `sync` mode, orphaned rows accumulate forever.
+- **Watch:** Mozart's push script now sends `sync: true`. If he ever sends a partial job list (not the full set), it will disable everything else. The flag means "this is ALL the active jobs."
+- **Watch:** The 4 new X Post crons have no run history for today — telemetry runs were recorded against old job IDs. Green status will appear starting tomorrow.
+- **Watch:** `reconcileTelemetryJobs` has complex ID matching logic (identity key, schedule fallback, UUID detection). If Mozart changes both name and schedule simultaneously, reconciliation may create a new row instead of updating the existing one.
+- **Next:** Mozart needs to verify his push script sends correct `agent_id` values (known keys: `moltzart`, `scout`, `pica`, `hawk`, `sigmund`) and display-quality names. Monitor tomorrow's calendar to confirm the new X Post crons show green after their first full day of runs.
+
 ## 2026-03-05 (session 23)
 
 - Dashboard redesign: replaced 5-panel layout (MetricStrip, Now, Watch, Latest, Newsletter Picks) with a focused 3-section single-column stack: Action Queue (blocked/urgent/ready tasks in a Panel), Health Strip (agents/blocked/completion as inline signals), and Recent Activity (one-line latest event). Deleted `src/components/dashboard/` directory (orphaned `newsletter-highlights.tsx` and `stat-card.tsx`).
