@@ -1,13 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import {
-  Breadcrumb,
-  BreadcrumbItem as BreadcrumbListItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BreadcrumbItem {
@@ -43,45 +36,52 @@ export function AdminPageIntro({
   className,
 }: AdminPageIntroProps) {
   const dividerClassName = dividerClassNames[divider];
+  const hasDivider = divider !== "none";
 
   return (
-    <div className={cn("flow-root space-y-5", className)}>
+    <div
+      className={cn(
+        "flow-root",
+        hasDivider && `border-b pb-4 mb-6 ${dividerClassName}`,
+        className
+      )}
+    >
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <div className={cn("pb-4", divider !== "none" && `border-b ${dividerClassName}`)}>
-          <Breadcrumb>
-            <BreadcrumbList className="text-sm text-zinc-500">
-              {breadcrumbs.map((item, i) => (
-                <Fragment key={`${item.label}-${i}`}>
-                  {i > 0 && <BreadcrumbSeparator />}
-                  <BreadcrumbListItem>
-                    {item.href ? (
-                      <BreadcrumbLink asChild>
-                        <Link href={item.href}>{item.label}</Link>
-                      </BreadcrumbLink>
-                    ) : (
-                      <BreadcrumbPage>{item.label}</BreadcrumbPage>
-                    )}
-                  </BreadcrumbListItem>
-                </Fragment>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <nav aria-label="breadcrumb" className="mb-3">
+          <ol className="flex items-center gap-1.5">
+            {breadcrumbs.map((item, i) => (
+              <Fragment key={`${item.label}-${i}`}>
+                {i > 0 && (
+                  <li role="presentation" aria-hidden="true">
+                    <ChevronRight size={12} className="text-zinc-700" />
+                  </li>
+                )}
+                <li>
+                  {item.href ? (
+                    <Link
+                      href={item.href}
+                      className="type-body-sm text-zinc-500 transition-colors hover:text-zinc-300"
+                    >
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <span className="type-body-sm text-zinc-400">
+                      {item.label}
+                    </span>
+                  )}
+                </li>
+              </Fragment>
+            ))}
+          </ol>
+        </nav>
       )}
 
-      <div
-        className={cn(
-          "flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between",
-          divider !== "none" && `border-b pb-4 mb-2 ${dividerClassName}`
-        )}
-      >
-        <div className="min-w-0 max-w-3xl space-y-3">
-          <div className="space-y-2">
-            <h1 className="type-h1 text-zinc-100">{title}</h1>
-            {subtitle && (
-              <p className="type-body text-zinc-400">{subtitle}</p>
-            )}
-          </div>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 max-w-3xl space-y-2">
+          <h1 className="type-h1 text-zinc-100">{title}</h1>
+          {subtitle && (
+            <p className="type-body text-zinc-400">{subtitle}</p>
+          )}
           {meta && (
             <div className="flex flex-wrap items-center gap-2 text-zinc-500">
               {meta}

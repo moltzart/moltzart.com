@@ -1,10 +1,9 @@
-// src/app/admin/newsletter/[week]/page.tsx
 import { notFound } from "next/navigation";
-import { fetchNewsletterWeek } from "@/lib/db";
-import { getWeekBounds } from "@/lib/newsletter-weeks";
-import { NewsletterView } from "@/components/newsletter-view";
-import { AdminPageIntro } from "@/components/admin/admin-page-intro";
-import { MetricStrip } from "@/components/admin/metric-strip";
+import { fetchNewsletterWeek, fetchNewsletterWeekStarts } from "@/lib/db";
+import { getWeekBounds, formatWeekLabel } from "@/lib/newsletter-weeks";
+import { PageHeader } from "@/components/admin/page-header";
+import { WeekSelector } from "@/components/week-selector";
+import { NewsletterArticlesTable } from "@/components/newsletter-view";
 
 export const dynamic = "force-dynamic";
 
@@ -15,30 +14,42 @@ interface Props {
 export default async function NewsletterWeekPage({ params }: Props) {
   const { week } = await params;
 
-  // Validate: must be a valid date that is a Monday (getUTCDay() === 1)
   const parsed = new Date(week + "T12:00:00Z");
   if (isNaN(parsed.getTime()) || parsed.getUTCDay() !== 1) {
     notFound();
   }
 
   const { start, end } = getWeekBounds(week);
-  const digests = await fetchNewsletterWeek(start, end);
+  const [digests, availableWeeks] = await Promise.all([
+    fetchNewsletterWeek(start, end),
+    fetchNewsletterWeekStarts(),
+  ]);
 
-  const totalArticles = digests.reduce((sum, d) => sum + d.articles.length, 0);
+  // Flatten digests into a single article array with day info attached
+  const articles = digests.flatMap((d) =>
+    d.articles.map((a) => ({
+      ...a,
+      digestDate: d.date,
+      dayLabel: d.label,
+    }))
+  );
 
   return (
     <div className="space-y-6">
-      <AdminPageIntro title="Newsletter" />
-
-      <MetricStrip
-        items={[
-          { label: "Digest Days", value: digests.length, note: "Days with newsletter picks this week." },
-          { label: "Articles", value: totalArticles, tone: "teal", note: "Total picks across the selected week." },
+      <PageHeader
+        title="Newsletter"
+        breadcrumbs={[
+          { label: "Newsletter", href: "/admin/newsletter" },
+          { label: formatWeekLabel(week) },
         ]}
-        className="xl:grid-cols-2"
-      />
-
-      <NewsletterView digests={digests} />
+      >
+        <WeekSelector
+          currentWeek={week}
+          availableWeeks={availableWeeks}
+          basePath="/admin/newsletter"
+        />
+      </PageHeader>
+      <NewsletterArticlesTable articles={articles} />
     </div>
   );
 }

@@ -422,6 +422,33 @@ export async function fetchNewsletterWeekStarts(): Promise<string[]> {
   return [...seen].sort().reverse();
 }
 
+export interface NewsletterWeekSummary {
+  week: string;
+  articleCount: number;
+  dayCount: number;
+}
+
+export async function fetchNewsletterWeekSummaries(): Promise<NewsletterWeekSummary[]> {
+  const rows = await sql()`
+    SELECT digest_date, COUNT(*)::int AS article_count
+    FROM newsletter_articles
+    GROUP BY digest_date
+    ORDER BY digest_date DESC
+  `;
+  const byWeek = new Map<string, { articleCount: number; days: Set<string> }>();
+  for (const r of rows) {
+    const date = toDateStr(r.digest_date);
+    const monday = getWeekMonday(date);
+    if (!byWeek.has(monday)) byWeek.set(monday, { articleCount: 0, days: new Set() });
+    const entry = byWeek.get(monday)!;
+    entry.articleCount += Number(r.article_count);
+    entry.days.add(date);
+  }
+  return [...byWeek.entries()]
+    .map(([week, { articleCount, days }]) => ({ week, articleCount, dayCount: days.size }))
+    .sort((a, b) => b.week.localeCompare(a.week));
+}
+
 export async function deleteNewsletterArticle(id: string): Promise<void> {
   await sql()`DELETE FROM newsletter_articles WHERE id = ${id}`;
 }
@@ -1363,6 +1390,7 @@ interface FetchResearchArtifactsOptions {
   domain?: ResearchArtifactDomain;
   task_id?: string;
   project_id?: string;
+  unassigned?: boolean;
   status?: ResearchArtifactStatus;
   limit?: number;
 }
@@ -1446,6 +1474,7 @@ export async function fetchResearchArtifactsDb(
   if (!capabilities.hasTable) return [];
 
   const limit = Math.max(1, Math.min(options?.limit ?? 100, 500));
+  const unassigned = options?.unassigned ?? false;
   const rows = capabilities.hasProjectId
     ? await sql()`
         SELECT * FROM research_artifacts
@@ -1453,6 +1482,7 @@ export async function fetchResearchArtifactsDb(
           AND (${options?.status ?? null}::text IS NULL OR status = ${options?.status ?? null})
           AND (${options?.task_id ?? null}::uuid IS NULL OR task_id = ${options?.task_id ?? null}::uuid)
           AND (${options?.project_id ?? null}::uuid IS NULL OR project_id = ${options?.project_id ?? null}::uuid)
+          AND (${unassigned}::boolean = false OR project_id IS NULL)
         ORDER BY created_at DESC
         LIMIT ${limit}
       `

@@ -612,35 +612,6 @@ Includes custom table rendering with the standard admin table style (`rounded-lg
 
 ---
 
-#### ResearchGroup
-**File**: `src/components/admin/research-group.tsx`
-
-Collapsible section with icon, title, and artifact count.
-
-```tsx
-import { ResearchGroup } from "@/components/admin/research-group"
-
-<ResearchGroup title="AI & Machine Learning" count={5}>
-  {/* List of items */}
-</ResearchGroup>
-
-<ResearchGroup title="Unassigned" count={3} isUnassigned>
-  {/* Items */}
-</ResearchGroup>
-```
-
-**Props**:
-| Prop | Type | Description |
-|---|---|---|
-| `title` | `string` | Group heading |
-| `count` | `number` | Displayed as "{n} artifact(s)" |
-| `isUnassigned` | `boolean?` | Uses Inbox icon instead of FolderOpen |
-| `children` | `ReactNode` | Content revealed when expanded |
-
-Client component (`"use client"`). Starts expanded by default.
-
----
-
 #### ResearchToc
 **File**: `src/components/admin/research-toc.tsx`
 

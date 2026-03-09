@@ -2,6 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { formatWeekLabel } from "@/lib/newsletter-weeks";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface WeekSelectorProps {
   currentWeek: string;       // ISO Monday date, e.g. "2026-02-16"
@@ -12,16 +19,17 @@ interface WeekSelectorProps {
 export function WeekSelector({ currentWeek, availableWeeks, basePath }: WeekSelectorProps) {
   const router = useRouter();
   return (
-    <select
-      value={currentWeek}
-      onChange={(e) => router.push(`${basePath}/${e.target.value}`)}
-      className="h-12 cursor-pointer rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 type-body-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-800/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60"
-    >
-      {availableWeeks.map((week) => (
-        <option key={week} value={week} className="bg-zinc-900 text-zinc-200">
-          {formatWeekLabel(week)}
-        </option>
-      ))}
-    </select>
+    <Select value={currentWeek} onValueChange={(v) => router.push(`${basePath}/${v}`)}>
+      <SelectTrigger size="sm">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {availableWeeks.map((week) => (
+          <SelectItem key={week} value={week}>
+            {formatWeekLabel(week)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

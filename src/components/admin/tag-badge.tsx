@@ -57,17 +57,12 @@ export function StatusTag({ status }: { status: ProjectStatus }) {
   );
 }
 
-const kindColors: Record<ProjectKind, string> = {
-  product: "bg-blue-500/20 text-blue-400",
-  general: "",
-};
-
 export function KindTag({ kind }: { kind: ProjectKind }) {
-  return <Badge className={kindColors[kind]}>{kind}</Badge>;
+  return <Badge variant="outline">{kind}</Badge>;
 }
 
 export const domainColors: Record<string, string> = {
-  product: "bg-blue-500/20 text-blue-400",
+  product: "bg-cyan-500/20 text-cyan-400",
   marketing: "bg-amber-500/20 text-amber-400",
   ops: "bg-cyan-500/20 text-cyan-400",
   content: "bg-pink-500/20 text-pink-400",

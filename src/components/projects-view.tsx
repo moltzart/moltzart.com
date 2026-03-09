@@ -1,188 +1,121 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Briefcase, ChevronRight, FolderKanban, Rocket } from "lucide-react";
-import type { DbProject } from "@/lib/db";
-import type { ProjectStatus } from "@/lib/projects";
-import { STATUS_META } from "@/lib/projects";
-import { CollectionPanel } from "@/components/admin/collection-panel";
+import { Archive, Briefcase, ChevronRight, Inbox } from "lucide-react";
+import type { DbProject, DbResearchArtifact } from "@/lib/db";
 import { EmptyState } from "@/components/admin/empty-state";
-import { KindTag } from "@/components/admin/tag-badge";
-import { MetricStrip } from "@/components/admin/metric-strip";
-import { SectionTabs } from "@/components/admin/section-tabs";
+import { SortableDataTable, type Column } from "@/components/admin/sortable-data-table";
+import { DomainTag, KindTag, StatusTag } from "@/components/admin/tag-badge";
 import { formatShortDate } from "@/lib/date-format";
 
-const ACTIVE_STATUSES: ProjectStatus[] = ["idea", "researching", "building"];
+/* ------------------------------------------------------------------ */
+/*  Projects view                                                     */
+/* ------------------------------------------------------------------ */
 
-const STATUS_DESCRIPTIONS: Record<ProjectStatus, string> = {
-  idea: "Early projects that still need their shape and constraints sharpened.",
-  researching: "Projects actively gathering evidence before they commit to build shape.",
-  building: "Live efforts with enough conviction to ship against.",
-  launched: "Finished work that defines the standard for what done should feel like.",
-  archived: "Dormant or retired work that should stop competing with the active pipeline.",
-};
+const projectColumns: Column<DbProject>[] = [
+  {
+    key: "title",
+    label: "Project",
+    render: (p) => p.title,
+    sortValue: (p) => p.title,
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (p) => <StatusTag status={p.status} />,
+    sortValue: (p) => p.status,
+  },
+  {
+    key: "kind",
+    label: "Kind",
+    render: (p) => <KindTag kind={p.kind} />,
+    sortValue: (p) => p.kind,
+  },
+  {
+    key: "artifacts",
+    label: "Artifacts",
+    render: (p) => p.artifact_count,
+    sortValue: (p) => p.artifact_count,
+  },
+  {
+    key: "updated",
+    label: "Updated",
+    render: (p) => formatShortDate(p.updated_at),
+    sortValue: (p) => p.updated_at,
+  },
+];
 
-type ProjectsTab = "active" | "launched" | "archive";
+const triageColumns: Column<DbResearchArtifact>[] = [
+  {
+    key: "title",
+    label: "Artifact",
+    render: (a) => a.title,
+    sortValue: (a) => a.title,
+  },
+  {
+    key: "domain",
+    label: "Domain",
+    render: (a) => <DomainTag domain={a.domain} />,
+    sortValue: (a) => a.domain,
+  },
+  {
+    key: "created",
+    label: "Date",
+    render: (a) => formatShortDate(a.created_at),
+    sortValue: (a) => a.created_at,
+  },
+];
 
-export function ProjectsView({ projects }: { projects: DbProject[] }) {
-  const [activeTab, setActiveTab] = useState<ProjectsTab>("active");
-  const activeProjects = useMemo(
-    () => projects.filter((project) => ACTIVE_STATUSES.includes(project.status)),
-    [projects]
-  );
-  const launchedProjects = useMemo(
-    () => projects.filter((project) => project.status === "launched"),
-    [projects]
-  );
-  const archivedProjects = useMemo(
-    () => projects.filter((project) => project.status === "archived"),
-    [projects]
-  );
+interface ProjectsViewProps {
+  projects: DbProject[];
+  unassignedArtifacts: DbResearchArtifact[];
+  archivedCount: number;
+}
 
-  if (projects.length === 0) {
+export function ProjectsView({ projects, unassignedArtifacts, archivedCount }: ProjectsViewProps) {
+  if (projects.length === 0 && unassignedArtifacts.length === 0 && archivedCount === 0) {
     return <EmptyState icon={Briefcase} message="No projects yet." />;
   }
 
-  const activeCount = projects.filter((project) => project.status !== "archived").length;
-  const launchedCount = projects.filter((project) => project.status === "launched").length;
-  const researchCount = projects.reduce((sum, project) => sum + project.artifact_count, 0);
-
   return (
-    <div className="space-y-6">
-      <MetricStrip
-        items={[
-          {
-            label: "Project Inventory",
-            value: projects.length,
-            note: "All projects in the system.",
-          },
-          {
-            label: "Active Pipeline",
-            value: activeCount,
-            tone: "teal",
-            note: `${researchCount} linked research artifacts are informing current work.`,
-          },
-          {
-            label: "Launched",
-            value: launchedCount,
-            tone: "green",
-            note: "Reference bar for what finished work should contain.",
-          },
-        ]}
-        className="xl:grid-cols-3"
-      />
-
-      <SectionTabs
-        items={[
-          { id: "active", label: "Active", count: activeProjects.length },
-          { id: "launched", label: "Launched", count: launchedProjects.length },
-          { id: "archive", label: "Archive", count: archivedProjects.length },
-        ]}
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value as ProjectsTab)}
-      />
-
-      {activeTab === "active" && (
-        <div className="space-y-4">
-          {ACTIVE_STATUSES.map((status) => {
-            const items = projects.filter((project) => project.status === status);
-            if (items.length === 0) return null;
-            const Icon = STATUS_META[status].icon;
-
-            return (
-              <CollectionPanel
-                key={status}
-                icon={Icon}
-                title={STATUS_META[status].label}
-                description={STATUS_DESCRIPTIONS[status]}
-                count={items.length}
-                countLabel={items.length === 1 ? "project" : "projects"}
-                iconClassName={STATUS_META[status].tone}
-                titleClassName={STATUS_META[status].tone}
-                className="overflow-hidden"
-                bodyClassName="border-t border-zinc-800/30"
-              >
-                <ProjectRows projects={items} />
-              </CollectionPanel>
-            );
-          })}
-        </div>
+    <div className="space-y-10">
+      {projects.length > 0 && (
+        <SortableDataTable
+          columns={projectColumns}
+          rows={projects}
+          rowHref={(p) => `/admin/projects/${p.slug}`}
+        />
       )}
 
-      {activeTab === "launched" && (
-        launchedProjects.length > 0 ? (
-          <CollectionPanel
-            icon={Rocket}
-            title="Launched projects"
-            description={STATUS_DESCRIPTIONS.launched}
-            count={launchedProjects.length}
-            countLabel={launchedProjects.length === 1 ? "project" : "projects"}
-            iconClassName="text-emerald-400"
-            titleClassName="text-emerald-400"
-            className="overflow-hidden"
-            bodyClassName="border-t border-zinc-800/30"
-          >
-            <ProjectRows projects={launchedProjects} />
-          </CollectionPanel>
-        ) : (
-          <EmptyState icon={Rocket} message="No launched projects yet." />
-        )
-      )}
-
-      {activeTab === "archive" && (
-        archivedProjects.length > 0 ? (
-          <CollectionPanel
-            icon={FolderKanban}
-            title="Archived projects"
-            description={STATUS_DESCRIPTIONS.archived}
-            count={archivedProjects.length}
-            countLabel={archivedProjects.length === 1 ? "project" : "projects"}
-            iconClassName="text-zinc-500"
-            titleClassName="text-zinc-300"
-            className="overflow-hidden"
-            bodyClassName="border-t border-zinc-800/30"
-          >
-            <ProjectRows projects={archivedProjects} />
-          </CollectionPanel>
-        ) : (
-          <EmptyState icon={FolderKanban} message="No archived projects." />
-        )
-      )}
-    </div>
-  );
-}
-
-function ProjectRows({ projects }: { projects: DbProject[] }) {
-  return (
-    <div className="divide-y divide-zinc-800/30">
-      {projects.map((project) => (
-        <Link
-          key={project.id}
-          href={`/admin/projects/${project.slug}`}
-          className="group grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 px-4 py-3 transition-colors hover:bg-zinc-800/30"
-        >
-          <div className="min-w-0 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="type-body-sm font-medium text-zinc-100 group-hover:text-white">
-                {project.title}
-              </p>
-              <KindTag kind={project.kind} />
-            </div>
-            {project.summary && (
-              <p className="type-body-sm line-clamp-2 text-zinc-500">{project.summary}</p>
-            )}
+      {unassignedArtifacts.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-center gap-3">
+            <Inbox size={14} className="shrink-0 text-amber-400" />
+            <h2 className="type-label text-amber-400">Triage</h2>
+            <span className="type-badge text-zinc-600">{unassignedArtifacts.length}</span>
           </div>
+          <SortableDataTable
+            columns={triageColumns}
+            rows={unassignedArtifacts}
+            rowHref={(a) => `/admin/research/${a.id}`}
+          />
+        </section>
+      )}
 
-          <div className="flex shrink-0 items-start gap-4 pt-1">
-            <div className="text-right">
-              <p className="type-body-sm text-zinc-400">{project.artifact_count} research</p>
-              <p className="mt-1 type-body-sm text-zinc-600">Updated {formatShortDate(project.updated_at)}</p>
-            </div>
-            <ChevronRight size={14} className="mt-1 text-zinc-700 transition-colors group-hover:text-zinc-400" />
-          </div>
-        </Link>
-      ))}
+      {archivedCount > 0 && (
+        <section>
+          <Link
+            href="/admin/projects/archived"
+            className="group inline-flex items-center gap-2 text-zinc-500 transition-colors hover:text-zinc-300"
+          >
+            <Archive size={14} className="shrink-0" />
+            <span className="type-body-sm">
+              {archivedCount} archived {archivedCount === 1 ? "project" : "projects"}
+            </span>
+            <ChevronRight size={14} className="shrink-0 text-zinc-700 transition-colors group-hover:text-zinc-400" />
+          </Link>
+        </section>
+      )}
     </div>
   );
 }

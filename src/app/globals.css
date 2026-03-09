@@ -209,7 +209,7 @@ html {
     @apply prose-li:text-sm prose-li:text-zinc-300 prose-li:leading-relaxed;
     @apply prose-strong:text-zinc-100;
     @apply prose-a:text-zinc-100 prose-a:underline prose-a:underline-offset-2;
-    @apply prose-code:text-amber-300 prose-code:bg-zinc-800/50 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-normal;
+    @apply prose-code:text-teal-400 prose-code:bg-zinc-800/50 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-normal;
     @apply prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800;
     @apply prose-table:text-sm prose-th:text-zinc-400 prose-th:font-medium prose-td:text-zinc-300;
     @apply prose-hr:border-zinc-800;
@@ -239,6 +239,10 @@ html {
   .doc-markdown-compact {
     @apply prose-sm prose-p:my-2 prose-li:my-0 prose-headings:mt-4 prose-headings:mb-2;
     @apply prose-p:text-sm prose-li:text-sm prose-h1:text-lg prose-h2:text-base prose-h3:text-sm;
+  }
+
+  .doc-markdown-full-width :where(p, ul, ol, blockquote) {
+    max-width: none;
   }
 
   .doc-markdown-subtle {

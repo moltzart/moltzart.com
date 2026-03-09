@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Briefcase, CalendarDays, CheckSquare, FileSearch, LayoutDashboard, LogOut, Newspaper, Paintbrush, PenLine } from "lucide-react";
+import { Briefcase, CalendarDays, CheckSquare, LayoutDashboard, LogOut, Newspaper, Paintbrush, PenLine } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,7 +20,6 @@ const navItems: SidebarNavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Tasks", href: "/admin/tasks", icon: CheckSquare },
   { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
-  { label: "Research", href: "/admin/research", icon: FileSearch },
   { label: "Projects", href: "/admin/projects", icon: Briefcase },
   { label: "Newsletter", href: "/admin/newsletter", icon: Newspaper },
   { label: "Drafts", href: "/admin/drafts", icon: PenLine },

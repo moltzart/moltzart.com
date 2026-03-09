@@ -2,11 +2,10 @@ import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { DomainTag } from "@/components/admin/tag-badge";
 import { fetchProjectById, fetchResearchArtifactById } from "@/lib/db";
-import { ContextRail } from "@/components/admin/context-rail";
 import { MarkdownRenderer } from "@/components/admin/markdown-renderer";
 import { extractHeadings } from "@/lib/research-headings";
 import { ResearchToc } from "@/components/admin/research-toc";
-import { AdminPageIntro } from "@/components/admin/admin-page-intro";
+import { PageHeader } from "@/components/admin/page-header";
 import { formatShortDate } from "@/lib/date-format";
 
 export const dynamic = "force-dynamic";
@@ -43,78 +42,58 @@ export default async function AdminResearchDetailPage({ params }: Props) {
 
   const sourceLinks = getLinkItems(artifact.source_links);
   const headings = extractHeadings(artifact.body_md);
-  const railSections = [
-    {
-      id: "meta",
-      title: "Context",
-      content: (
-        <>
-          <p className="type-body-sm text-zinc-400">{formatShortDate(artifact.created_at)}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <DomainTag domain={artifact.domain} />
-            {linkedProject && (
-              <a
-                href={`/admin/projects/${linkedProject.project.slug}`}
-                className="type-body-sm text-zinc-400 transition-colors hover:text-teal-400"
-              >
-                {linkedProject.project.title}
-              </a>
-            )}
-          </div>
-        </>
-      ),
-    },
-    ...(sourceLinks.length > 0
-      ? [{
-          id: "sources",
-          title: "Source Links",
-          content: (
-            <div className="space-y-2">
-              {sourceLinks.map((item) => (
-                <a
-                  key={`${item.url}-${item.label}`}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start justify-between gap-3 rounded-xl border border-zinc-800/60 bg-zinc-950/50 px-3 py-3 transition-colors hover:border-zinc-700/60 hover:bg-zinc-900/60"
-                >
-                  <span className="type-body-sm text-zinc-300">{item.label}</span>
-                  <ExternalLink size={12} className="mt-1 shrink-0 text-teal-400" />
-                </a>
-              ))}
-            </div>
-          ),
-        }]
-      : []),
-    ...(headings.length > 0
-      ? [{
-          id: "toc",
-          title: "On This Page",
-          content: <ResearchToc headings={headings} />,
-        }]
-      : []),
-  ];
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
-      <div className="min-w-0 lg:border-r lg:border-zinc-800/60 lg:pr-8">
-        <AdminPageIntro
-          title={artifact.title}
-          breadcrumbs={[
-            { label: "Research", href: "/admin/research" },
-            ...(linkedProject
-              ? [{ label: linkedProject.project.title, href: `/admin/projects/${linkedProject.project.slug}` }]
-              : []),
-            { label: artifact.title },
-          ]}
-        />
+    <div className="space-y-8">
+      <PageHeader
+        title={artifact.title}
+        breadcrumbs={[
+          { label: "Projects", href: "/admin/projects" },
+          ...(linkedProject
+            ? [{ label: linkedProject.project.title, href: `/admin/projects/${linkedProject.project.slug}` }]
+            : [{ label: "Triage", href: "/admin/projects" }]),
+          { label: artifact.title },
+        ]}
+        meta={
+          <>
+            <DomainTag domain={artifact.domain} />
+            <span className="type-body-sm text-zinc-600">{formatShortDate(artifact.created_at)}</span>
+          </>
+        }
+      />
 
-        <div className="mt-6">
-          <MarkdownRenderer content={artifact.body_md} generateIds skipFirstH1 />
+      {sourceLinks.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="type-label text-zinc-500">Source links</h3>
+          <div className="flex flex-wrap gap-2">
+            {sourceLinks.map((item) => (
+              <a
+                key={`${item.url}-${item.label}`}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800/60 bg-zinc-950/50 px-3 py-1.5 text-zinc-300 transition-colors hover:border-zinc-700/60 hover:bg-zinc-900/60"
+              >
+                <span className="type-body-sm">{item.label}</span>
+                <ExternalLink size={12} className="shrink-0 text-zinc-500" />
+              </a>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <ContextRail sections={railSections} />
+      {headings.length > 0 ? (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="min-w-0">
+            <MarkdownRenderer content={artifact.body_md} className="doc-markdown-full-width" generateIds skipFirstH1 sanitize />
+          </div>
+          <aside className="hidden lg:block">
+            <ResearchToc headings={headings} />
+          </aside>
+        </div>
+      ) : (
+        <MarkdownRenderer content={artifact.body_md} className="doc-markdown-full-width" generateIds skipFirstH1 sanitize />
+      )}
     </div>
   );
 }

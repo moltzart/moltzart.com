@@ -1,5 +1,18 @@
 # Project Log
 
+## 2026-03-09 (session 25)
+
+- Newsletter page redesign: replaced redirect-to-current-week with an editions table (`/admin/newsletter`) showing all weeks with article/day counts. Week detail (`/admin/newsletter/[week]`) now shows a flat sortable article table instead of collapsible day panels.
+- Extracted `SortableDataTable` from `projects-view.tsx` into `src/components/admin/sortable-data-table.tsx` as a shared generic component with `rowHref`, `rowKey`, and `rowAction` props. Projects view updated to import from shared component.
+- Added `fetchNewsletterWeekSummaries()` to `db.ts` — groups articles by week-Monday, returns `{ week, articleCount, dayCount }[]`.
+- Replaced raw `<select>` in `WeekSelector` with shadcn `Select` component (added `src/components/ui/select.tsx`). Moved selector into PageHeader's actions slot (right-aligned next to title).
+- Created `src/components/newsletter-editions-table.tsx` (editions landing) and rewrote `src/components/newsletter-view.tsx` as `NewsletterArticlesTable` (flat article table with delete action).
+- **Decision:** Two-level newsletter layout: Level 1 is an editions overview table (one row per week), Level 2 is a flat article table for the week. No collapsible day panels — days are a sortable column. Keeps everything scannable and consistent with the projects table pattern.
+- **Decision:** Extracted `SortableDataTable` as shared component rather than duplicating. It's generic enough and already used on two pages (projects, newsletter editions). The `rowAction` prop supports non-link interactions (delete buttons) alongside `rowHref` for linked rows.
+- **Learned:** The `meta` prop on `AdminPageIntro` renders below the title in muted text — not right-aligned. Use `actions` (or `children` via `PageHeader`) for right-aligned controls like selectors.
+- **Learned:** Native `<select>` looks broken in dark themes (white dropdown, OS-styled options). Always use shadcn `Select` (Radix-based) for consistent dark-theme dropdowns.
+- **Next:** Day grouping in the article table is flat (Day column, sortable). Matt was asked if he wants visual day dividers — left open. Also: no commit/push yet this session — need to commit all changes and push.
+
 ## 2026-03-06 (session 24)
 
 - Removed subtitles from all 9 admin page headers — list pages are title-only, detail pages keep breadcrumbs.
