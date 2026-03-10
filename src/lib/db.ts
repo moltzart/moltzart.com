@@ -465,6 +465,37 @@ export interface DbXDraft {
   posted_at: string | null;
 }
 
+export interface DraftWeekSummary {
+  week: string;
+  draftCount: number;
+  postedCount: number;
+  dayCount: number;
+}
+
+export async function fetchXDraftWeekSummaries(): Promise<DraftWeekSummary[]> {
+  const rows = await sql()`
+    SELECT created_at::date AS date,
+           COUNT(*)::int AS draft_count,
+           COUNT(*) FILTER (WHERE status = 'posted')::int AS posted_count
+    FROM x_drafts
+    GROUP BY created_at::date
+    ORDER BY date DESC
+  `;
+  const byWeek = new Map<string, { draftCount: number; postedCount: number; days: Set<string> }>();
+  for (const r of rows) {
+    const date = toDateStr(r.date);
+    const monday = getWeekMonday(date);
+    if (!byWeek.has(monday)) byWeek.set(monday, { draftCount: 0, postedCount: 0, days: new Set() });
+    const entry = byWeek.get(monday)!;
+    entry.draftCount += Number(r.draft_count);
+    entry.postedCount += Number(r.posted_count);
+    entry.days.add(date);
+  }
+  return [...byWeek.entries()]
+    .map(([week, { draftCount, postedCount, days }]) => ({ week, draftCount, postedCount, dayCount: days.size }))
+    .sort((a, b) => b.week.localeCompare(a.week));
+}
+
 export async function fetchXDrafts(status?: string): Promise<DbXDraft[]> {
   const rows = status
     ? await sql()`SELECT * FROM x_drafts WHERE status = ${status} ORDER BY created_at ASC`

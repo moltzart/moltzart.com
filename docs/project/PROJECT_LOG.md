@@ -1,5 +1,19 @@
 # Project Log
 
+## 2026-03-10 (session 26)
+
+- Renamed admin "Drafts" section to "Social": moved route `admin/drafts/` → `admin/social/`, renamed components (`DraftsEditionsTable` → `SocialEditionsTable`, `DraftsTable` → `SocialTable`), sidebar icon changed from `PenLine` to `MessageSquare`.
+- Added "Posted" ratio column to social editions table — query uses `COUNT(*) FILTER (WHERE status = 'posted')`, rendered as `postedCount/draftCount`.
+- Changed Social and Newsletter landing pages (`/admin/social`, `/admin/newsletter`) to redirect to the current week's detail view. Editions overview tables moved to `/admin/social/editions` and `/admin/newsletter/editions`, accessible via breadcrumb.
+- Removed "Always On" high-frequency cron section from calendar header (SESSION STATE, HEARTBEAT badges). Calendar header grid reduced from 3 columns to 2.
+- Made Agents and Status legend rows inline — labels sit next to their badges in a single row instead of stacked.
+- Added 30-second auto-polling to calendar view for near-real-time cron status updates (silent fetch, no loading spinner).
+- **Decision:** Social/Newsletter default to current week because that's what you look at 95% of the time. Editions overview is one breadcrumb click away for browsing history. Avoids an extra click on every visit.
+- **Decision:** 30s polling for calendar instead of WebSocket/SSE — Vercel serverless functions timeout on long-lived connections. Polling is reliable and the cron resolution is minutes, so 30s is more than sufficient.
+- **Watch:** API routes (`/api/ingest/draft`, `/api/admin/draft/[id]`) and DB function names (`fetchXDraft*`) intentionally unchanged to avoid breaking Moltzart/Pica agents. Only UI routes and component names were renamed.
+- **Watch:** Old `/admin/drafts` route now 404s. Any bookmarks or external links to it will break.
+- **Next:** Commit and push all session 25+26 changes. Old `drafts-editions-table.tsx` and `drafts-view.tsx` files are deleted — verify clean git status before committing.
+
 ## 2026-03-09 (session 25)
 
 - Newsletter page redesign: replaced redirect-to-current-week with an editions table (`/admin/newsletter`) showing all weeks with article/day counts. Week detail (`/admin/newsletter/[week]`) now shows a flat sortable article table instead of collapsible day panels.

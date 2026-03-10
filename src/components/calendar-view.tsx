@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import type { DbCronJob, DbJobRun } from "@/lib/db";
 import { AdminPageIntro } from "@/components/admin/admin-page-intro";
@@ -97,13 +97,6 @@ function expandCron(expr: string, weekDays: string[]): CronRun[] {
 
 // --- Cron expansion with run status ---
 
-interface AlwaysRunningJob {
-  name: string;
-  agentId: string | null;
-  frequency: string;
-  displayName: string;
-}
-
 const AGENT_META = {
   moltzart: {
     label: "Moltzart",
@@ -147,19 +140,11 @@ function getAgentMeta(agentId: string | null | undefined) {
   return AGENT_META[agentId as keyof typeof AGENT_META] ?? AGENT_META.unknown;
 }
 
-function getAlwaysOnDisplayName(name: string, frequency: string) {
-  const normalized = name.toLowerCase();
-  if (normalized.includes("heartbeat")) return "HEARTBEAT (*/15)";
-  if (normalized.includes("session state")) return "SESSION STATE (*/60)";
-  return `${name.toUpperCase()} (${frequency.toUpperCase()})`;
-}
-
 function categorizeCrons(
   crons: DbCronJob[],
   jobRuns: DbJobRun[],
   weekDays: string[]
-): { alwaysRunning: AlwaysRunningJob[]; scheduled: Map<string, DayEvent[]> } {
-  const alwaysRunning: AlwaysRunningJob[] = [];
+): { scheduled: Map<string, DayEvent[]> } {
   const scheduled = new Map<string, DayEvent[]>();
   const todayStr = fmtDate(new Date());
   const nowH = new Date().getHours();
@@ -180,17 +165,7 @@ function categorizeCrons(
 
     const weekRuns = expandCron(job.schedule_expr, weekDays);
 
-    if (isHighFrequencyCron(job.schedule_expr, weekDays)) {
-      const perDay = Math.round(weekRuns.length / 7);
-      const freq = perDay >= 24 ? `Every ${Math.round((24 * 60) / perDay)} min` : `${perDay}x daily`;
-      alwaysRunning.push({
-        name: job.name,
-        agentId: job.agent_id,
-        frequency: freq,
-        displayName: getAlwaysOnDisplayName(job.name, freq),
-      });
-      continue;
-    }
+    if (isHighFrequencyCron(job.schedule_expr, weekDays)) continue;
 
     for (const run of weekRuns) {
       if (!scheduled.has(run.dateKey)) scheduled.set(run.dateKey, []);
@@ -222,14 +197,7 @@ function categorizeCrons(
     events.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   }
 
-  const seen = new Set<string>();
-  const dedupedAlwaysRunning = alwaysRunning.filter((job) => {
-    if (seen.has(job.name)) return false;
-    seen.add(job.name);
-    return true;
-  });
-
-  return { alwaysRunning: dedupedAlwaysRunning, scheduled };
+  return { scheduled };
 }
 
 // --- Component ---
@@ -262,7 +230,17 @@ export function CalendarView({ initialData, initialStart }: CalendarViewProps) {
   const goNext = useCallback(() => loadWeek(addDays(weekStart, 7)), [weekStart, loadWeek]);
   const refresh = useCallback(() => loadWeek(weekStart), [weekStart, loadWeek]);
 
-  const { alwaysRunning, scheduled } = useMemo(
+  // Silent auto-poll every 30s (no loading spinner)
+  useEffect(() => {
+    const id = setInterval(async () => {
+      const end = addDays(weekStart, 6);
+      const res = await fetch(`/api/admin/calendar?start=${weekStart}&end=${end}`);
+      if (res.ok) setData(await res.json());
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [weekStart]);
+
+  const { scheduled } = useMemo(
     () => categorizeCrons(data.crons, data.jobRuns, weekDays),
     [data.crons, data.jobRuns, weekDays]
   );
@@ -301,7 +279,7 @@ export function CalendarView({ initialData, initialStart }: CalendarViewProps) {
       cancelAnimationFrame(frame2);
       window.removeEventListener("resize", measureAfterLayout);
     };
-  }, [scheduled, alwaysRunning.length, weekDays]);
+  }, [scheduled, weekDays]);
 
   const iconButtonClass =
     "inline-flex size-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-800/40 hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500/60 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none";
@@ -335,63 +313,42 @@ export function CalendarView({ initialData, initialStart }: CalendarViewProps) {
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-start">
-        <div className="space-y-2 min-w-0">
-          <div className="type-badge text-zinc-600">Agents</div>
-          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {(["moltzart", "scout", "pica", "hawk", "sigmund"] as const).map((agentKey) => {
-              const agent = AGENT_META[agentKey];
-              return (
-                <Badge
-                  key={agentKey}
-                  variant="status"
-                  shape="pill"
-                  className={`shrink-0 ${agent.badge}`}
-                >
-                  {agent.short}: {agent.label}
-                </Badge>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-2 min-w-0">
-          <div className="type-badge text-zinc-600">Always On</div>
-          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {alwaysRunning.map((job) => (
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <span className="type-badge text-zinc-600 shrink-0">Agents</span>
+          {(["moltzart", "scout", "pica", "hawk", "sigmund"] as const).map((agentKey) => {
+            const agent = AGENT_META[agentKey];
+            return (
               <Badge
-                key={job.name}
-                variant="outline"
+                key={agentKey}
+                variant="status"
                 shape="pill"
-                className="shrink-0 bg-zinc-900/50 text-zinc-500"
+                className={`shrink-0 ${agent.badge}`}
               >
-                <span className="text-zinc-300">{getAgentMeta(job.agentId).short}:</span>
-                {job.displayName}
+                {agent.short}: {agent.label}
               </Badge>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
-        <div className="space-y-2 min-w-0 xl:justify-self-end">
-          <div className="type-badge text-zinc-600">Status</div>
-          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            <Badge variant="outline" shape="pill" className="shrink-0 bg-zinc-900/50 text-zinc-500">
-              <span className="inline-block size-1.5 rounded-full bg-emerald-400" />
-              Ran
-            </Badge>
-            <Badge variant="outline" shape="pill" className="shrink-0 bg-zinc-900/50 text-zinc-500">
-              <span className="inline-block size-1.5 rounded-full bg-red-400" />
-              Error
-            </Badge>
-            <Badge variant="outline" shape="pill" className="shrink-0 bg-zinc-900/50 text-zinc-500">
-              <span className="inline-block size-1.5 rounded-full bg-amber-400" />
-              Missed
-            </Badge>
-            <Badge variant="outline" shape="pill" className="shrink-0 bg-zinc-900/50 text-zinc-500">
-              <span className="inline-block size-1.5 rounded-full bg-zinc-600" />
-              Upcoming
-            </Badge>
-          </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="type-badge text-zinc-600">Status</span>
+          <Badge variant="outline" shape="pill" className="shrink-0 bg-zinc-900/50 text-zinc-500">
+            <span className="inline-block size-1.5 rounded-full bg-emerald-400" />
+            Ran
+          </Badge>
+          <Badge variant="outline" shape="pill" className="shrink-0 bg-zinc-900/50 text-zinc-500">
+            <span className="inline-block size-1.5 rounded-full bg-red-400" />
+            Error
+          </Badge>
+          <Badge variant="outline" shape="pill" className="shrink-0 bg-zinc-900/50 text-zinc-500">
+            <span className="inline-block size-1.5 rounded-full bg-amber-400" />
+            Missed
+          </Badge>
+          <Badge variant="outline" shape="pill" className="shrink-0 bg-zinc-900/50 text-zinc-500">
+            <span className="inline-block size-1.5 rounded-full bg-zinc-600" />
+            Upcoming
+          </Badge>
         </div>
       </div>
 

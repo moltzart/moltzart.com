@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { fetchNewsletterWeek, fetchNewsletterWeekStarts } from "@/lib/db";
+import { fetchXDraftsWeek, fetchXDraftWeekStarts } from "@/lib/db";
 import { getWeekBounds, formatWeekLabel } from "@/lib/newsletter-weeks";
 import { PageHeader } from "@/components/admin/page-header";
 import { WeekSelector } from "@/components/week-selector";
-import { NewsletterArticlesTable } from "@/components/newsletter-view";
+import { SocialTable } from "@/components/social-view";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ interface Props {
   params: Promise<{ week: string }>;
 }
 
-export default async function NewsletterWeekPage({ params }: Props) {
+export default async function SocialWeekPage({ params }: Props) {
   const { week } = await params;
 
   const parsed = new Date(week + "T12:00:00Z");
@@ -20,16 +20,14 @@ export default async function NewsletterWeekPage({ params }: Props) {
   }
 
   const { start, end } = getWeekBounds(week);
-  const [digests, availableWeeks] = await Promise.all([
-    fetchNewsletterWeek(start, end),
-    fetchNewsletterWeekStarts(),
+  const [days, availableWeeks] = await Promise.all([
+    fetchXDraftsWeek(start, end),
+    fetchXDraftWeekStarts(),
   ]);
 
-  // Flatten digests into a single article array with day info attached
-  const articles = digests.flatMap((d) =>
-    d.articles.map((a) => ({
-      ...a,
-      digestDate: d.date,
+  const drafts = days.flatMap((d) =>
+    d.drafts.map((draft) => ({
+      ...draft,
       dayLabel: d.label,
     }))
   );
@@ -37,19 +35,19 @@ export default async function NewsletterWeekPage({ params }: Props) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Newsletter"
+        title="Social"
         breadcrumbs={[
-          { label: "Newsletter", href: "/admin/newsletter/editions" },
+          { label: "Social", href: "/admin/social/editions" },
           { label: formatWeekLabel(week) },
         ]}
       >
         <WeekSelector
           currentWeek={week}
           availableWeeks={availableWeeks}
-          basePath="/admin/newsletter"
+          basePath="/admin/social"
         />
       </PageHeader>
-      <NewsletterArticlesTable articles={articles} />
+      <SocialTable drafts={drafts} />
     </div>
   );
 }

@@ -3,8 +3,8 @@ import { getWeekMonday } from "@/lib/newsletter-weeks";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminNewsletterPage() {
+export default function AdminSocialPage() {
   const today = new Date().toISOString().slice(0, 10);
   const currentMonday = getWeekMonday(today);
-  redirect(`/admin/newsletter/${currentMonday}`);
+  redirect(`/admin/social/${currentMonday}`);
 }
