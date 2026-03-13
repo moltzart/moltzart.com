@@ -7,6 +7,7 @@ export interface OpenClawCronMeta {
 type IngestCronJob = {
   id: string;
   name: string;
+  description?: string | null;
   agent_id?: string;
   enabled?: boolean;
   schedule_expr: string;

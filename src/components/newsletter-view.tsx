@@ -104,14 +104,14 @@ export function NewsletterArticlesTable({ articles: initialArticles, weekMonday 
               type="button"
               variant="ghost"
               size="xs"
-              className="text-zinc-400 hover:text-zinc-300"
+              className="w-[6.5rem] justify-center text-zinc-400 hover:text-zinc-300"
               onClick={() => void sendToOS(a)}
               disabled={sendingId === a.id || sentIds.has(a.id) || a.sentToOs}
             >
               {sendingId === a.id ? (
                 <Loader2 size={12} className="animate-spin" />
               ) : (sentIds.has(a.id) || a.sentToOs) ? (
-                <Check size={12} className="text-green-500" />
+                <Check size={12} />
               ) : (
                 <Send size={12} />
               )}

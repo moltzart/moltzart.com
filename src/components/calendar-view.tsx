@@ -31,6 +31,7 @@ interface DayEvent {
   sortKey: string;
   status: CronRunStatus;
   summary?: string;
+  description?: string | null;
 }
 
 // --- Status indicator styles ---
@@ -147,6 +148,7 @@ function categorizeCrons(
         sortKey: sortKeyHM(run.hour, run.minute),
         status,
         summary,
+        description: job.description,
       });
     }
   }
@@ -375,16 +377,22 @@ function EventCard({ event }: { event: DayEvent }) {
   const si = STATUS_INDICATOR[event.status];
   const agent = getAgentMeta(event.agentId);
   const statusDotClass = si.dot.replace(" animate-pulse", "");
+  const tooltip = [event.description, event.summary].filter(Boolean).join("\n\n");
 
   return (
     <div
       className={`rounded-lg border bg-zinc-900/30 px-1.5 py-2 ${si.border}`}
-      title={event.summary || undefined}
+      title={tooltip || undefined}
     >
       <div className="pl-1">
         <div className="text-xs font-medium leading-tight text-zinc-200">
           {event.name}
         </div>
+        {event.description && (
+          <div className="mt-0.5 text-[10px] leading-tight text-zinc-500 line-clamp-2">
+            {event.description}
+          </div>
+        )}
       </div>
       <div className="mt-1 flex items-center gap-1.5 pl-1 type-badge text-zinc-500">
         <span className={`inline-block size-1.5 rounded-full ${statusDotClass}`} />

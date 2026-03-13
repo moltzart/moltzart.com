@@ -1749,6 +1749,7 @@ async function ensureUniqueProjectSlug(baseSlug: string, excludeId?: string): Pr
 export interface DbCronJob {
   id: string;
   name: string;
+  description: string | null;
   agent_id: string | null;
   enabled: boolean;
   schedule_expr: string;
@@ -1765,6 +1766,7 @@ export async function upsertCronJobs(
   jobs: {
     id: string;
     name: string;
+    description?: string | null;
     agent_id?: string;
     enabled?: boolean;
     schedule_expr: string;
@@ -1779,9 +1781,9 @@ export async function upsertCronJobs(
   let upserted = 0;
   for (const j of jobs) {
     await sql()`
-      INSERT INTO cron_jobs (id, name, agent_id, enabled, schedule_expr, schedule_tz, last_run_at, last_status, last_duration_ms, next_run_at, consecutive_errors, synced_at)
+      INSERT INTO cron_jobs (id, name, description, agent_id, enabled, schedule_expr, schedule_tz, last_run_at, last_status, last_duration_ms, next_run_at, consecutive_errors, synced_at)
       VALUES (
-        ${j.id}, ${j.name}, ${j.agent_id || null}, ${j.enabled !== false},
+        ${j.id}, ${j.name}, ${j.description ?? null}, ${j.agent_id || null}, ${j.enabled !== false},
         ${j.schedule_expr}, ${j.schedule_tz || "America/New_York"},
         ${j.last_run_at || null}::timestamptz, ${j.last_status || null},
         ${j.last_duration_ms ?? null}::int, ${j.next_run_at || null}::timestamptz,
@@ -1789,6 +1791,7 @@ export async function upsertCronJobs(
       )
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
+        description = COALESCE(EXCLUDED.description, cron_jobs.description),
         agent_id = EXCLUDED.agent_id,
         enabled = EXCLUDED.enabled,
         schedule_expr = EXCLUDED.schedule_expr,
@@ -1809,6 +1812,7 @@ export async function replaceCronJobsSnapshot(
   jobs: {
     id: string;
     name: string;
+    description?: string | null;
     agent_id?: string;
     enabled?: boolean;
     schedule_expr: string;

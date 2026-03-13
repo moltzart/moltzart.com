@@ -70,7 +70,7 @@ export function SortableDataTable<T>({ columns, rows, rowHref, rowKey, rowAction
                 </span>
               </th>
             ))}
-            {rowAction && <th className="w-24" />}
+            {rowAction && <th className="w-40" />}
           </tr>
         </thead>
         <tbody>

@@ -1,5 +1,16 @@
 # Project Log
 
+## 2026-03-12 (session 28)
+
+- Added `description` column to `cron_jobs` table (text, nullable). Threaded through `DbCronJob`, `upsertCronJobs`, `IngestCronJob`, `DayEvent`, and `EventCard`. Description shows as a muted subtitle on calendar event cards and in the native tooltip (combined with run summary).
+- Seeded "Newsletter Catch-Up Check" cron with description: "Safety net only. Checks for unprocessed newsletters missed by real-time Sigmund hook. Expected to be a no-op most days."
+- Fixed newsletter table layout shift: "Send to OS" / "Sent" button now has fixed width (`w-[6.5rem]`, centered text). Removed green check icon color — inherits `text-zinc-400`. Widened action column (`w-24` → `w-40`).
+- **Decision:** `description` uses `COALESCE(EXCLUDED.description, cron_jobs.description)` on upsert — telemetry pushes that omit description won't wipe an existing value. Descriptions are set-once-and-keep unless explicitly overwritten.
+- **Learned:** The cron name already updated to "Newsletter Catch Up Check" via a prior telemetry sync — the `upsertCronJobs` ON CONFLICT updates name automatically. No manual rename needed.
+- **Watch:** The `consecutive_errors: 2` on `newsletter-processing` is stale from the old batch-processing architecture (Pica timeouts). Will clear after next successful 10 AM run. Not a current problem.
+- **Watch:** Action column width in `SortableDataTable` is now `w-40` globally — this affects projects table and newsletter editions table too. If those look too wide, may need per-table override.
+- **Next:** Set `OS_BASE_URL` and `OS_BULK_IMPORT_KEY` on Moltzart's Vercel env vars (carried over from session 27). Commit and push session 28 changes.
+
 ## 2026-03-11 (session 27)
 
 - Built Newsletter Bridge: Moltzart → OS. Per-row "Send to OS" button on newsletter article table calls `/api/newsletter/send-to-os`, which relays to OS's `/api/newsletter/links/import` with API key auth. Links land as unprocessed URL-only records in OS's "Incoming" sidebar section.
